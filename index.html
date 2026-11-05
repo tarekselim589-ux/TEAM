@@ -173,12 +173,23 @@ select,input{min-width:0;height:42px;margin:0}
 input[type=date]{-webkit-appearance:none;appearance:none;display:block;text-align:left}
 input[type=date]::-webkit-date-and-time-value{text-align:left;margin:0}
 .full{flex:1 1 100%!important}
-#p-team .fbx{grid-template-columns:repeat(auto-fill,minmax(62px,1fr))}
-#p-team .fc{height:40px;flex-direction:column;gap:0;line-height:1.1}
-#p-team .fc .fw{font:600 11px var(--body);color:var(--muted)}
+#p-team .fbx{display:flex;flex-wrap:wrap;gap:4px}
+#p-team .fc{height:26px;padding:0 6px;border-radius:6px;flex-direction:row;gap:3px;line-height:1;white-space:nowrap}
+#p-team .fc .fd{display:inline-flex;align-items:center;gap:2px;font-size:13px}
+#p-team .fc .fw{font:500 11px var(--body);color:var(--muted)}
 #p-team .fc .fm{font:700 12px var(--body)}
 #p-team .fc.p .fw,#p-team .fc.a .fw{color:inherit}
-#p-team .fc.today{border-color:var(--blue)}
+.fc.today{border:2.5px solid var(--blue)!important;color:var(--blue)}
+.fc.today .fd,.fc.today .fw{color:var(--blue)}
+.fc.miss{border:1.5px dashed var(--warn);background:var(--goldtint);color:var(--warn)}
+.fc.miss .fd,.fc.miss .fw{color:var(--warn)}
+.fc .fx{font:700 12px var(--body);color:var(--warn)}
+.nmk{font-size:13px;color:var(--warn);background:var(--goldtint);border-radius:10px;padding:7px 12px;margin:0;font-weight:500}
+.day.today{outline:2.5px solid var(--blue);outline-offset:-2px;border-radius:10px;padding-inline:8px}
+.day.today .ddate,.day.today .dname{color:var(--blue)}
+.day.miss{background:var(--goldtint);border:1.5px dashed var(--warn);border-radius:10px;padding-inline:8px}
+.day.miss .ddate::after{content:" !";color:var(--warn);font-weight:700}
+.nmk+.day{border-top:0}
 .foot{display:flex;flex-direction:column;gap:12px}
 .arow{display:grid;grid-template-columns:28px minmax(0,1fr) 80px;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
 .arow:first-child{border-top:0}
@@ -213,6 +224,7 @@ input[type=date]::-webkit-date-and-time-value{text-align:left;margin:0}
   <!-- TEAMS (Safwa / Sharks / Dolphin share one panel) -->
   <section class="panel" id="p-team">
     <div class="sub" id="tSum"></div>
+    <p class="nmk" id="tMiss" hidden></p>
     <div class="card" id="tList"></div>
     <p class="note" id="tHow"></p>
     <div class="flast" id="tLast" hidden></div>
@@ -221,7 +233,6 @@ input[type=date]::-webkit-date-and-time-value{text-align:left;margin:0}
         <form class="row" id="tAddF" novalidate>
           <label class="full">Swimmer name<input id="tName" maxlength="40" autocomplete="off"></label>
           <label style="flex:1 1 0">Start date<input id="tStart" type="date"></label>
-          <label style="flex:0 0 90px">Sessions<input id="tN" type="number" inputmode="numeric" min="1" max="40"></label>
           <button class="btn" type="submit" style="flex:0 0 auto">Add</button>
         </form>
         <p class="err" id="tAddErr" hidden></p>
@@ -234,6 +245,7 @@ input[type=date]::-webkit-date-and-time-value{text-align:left;margin:0}
   <!-- FITNESS GROUP -->
   <section class="panel" id="p-fit" hidden>
     <div class="sub" id="fitSum"></div>
+    <p class="nmk" id="fitMiss" hidden></p>
     <div class="card" id="fitList"></div>
     <p class="note">Tap any box to change it: empty → ✓ Present → ✗ Absent → empty. Each ✗ adds a make-up Tuesday at the end. Tap a name to renew it from a new Tuesday. Orange name = 1 session left or finished.</p>
     <div class="flast" id="fitLast" hidden></div>
@@ -358,6 +370,14 @@ const keyOf=dt=>`${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())
 const parse=k=>{const [y,m,d]=k.split("-").map(Number);return new Date(y,m-1,d);};
 const show=k=>{const d=parse(k);return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;};
 const todayKey=keyOf(new Date(CY,CM,now.getDate()));
+/* "Not marked" line: days that passed with no ✓ or ✗ (newest first) */
+function missLine(el,counts,label){
+  const ks=Object.keys(counts).sort().reverse(); if(!ks.length){el.hidden=true;return;}
+  const SH=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], f=k=>{const d=parse(k);return SH[d.getDay()]+" "+pad(d.getDate())+"/"+pad(d.getMonth()+1);};
+  const items=ks.slice(0,6).map(k=>f(k)+(label&&counts[k]>0?` (${counts[k]})`:""));
+  el.textContent="Not marked: "+items.join(" · ")+(ks.length>6?` · +${ks.length-6} more`:"");
+  el.hidden=false;
+}
 const order=d=>[6,0,1,2,3,4,5].indexOf(d);
 const dayList=ds=>[...ds].sort((a,b)=>order(a)-order(b)).map(d=>DAYS[d]);
 const orList=ds=>{const l=dayList(ds);return l.length<2?l.join(""):l.slice(0,-1).join(", ")+" or "+l[l.length-1];};
@@ -569,10 +589,13 @@ function renderAtt(k){
   const c=CFG[k], map=S.att[k]||{}, pk=(S.pk[k]||[]).find(p=>p.id===S.sel[k]);
   if(!pk){$(c.box).innerHTML=`<p class="empty">Sessions will appear here with their dates once you start a package.</p>`;$(c.tot).textContent=`0 of ${c.n}`;$(c.sub).innerHTML="";return;}
   const out=sessions(k,pk);
-  let p=0,a=0;
-  $(c.box).innerHTML=out.map(o=>{
+  let p=0,a=0; const miss={};
+  out.forEach(o=>{ if(!map[o.key]&&o.key<todayKey) miss[o.key]=0; });
+  const ml=Object.keys(miss).sort().reverse();
+  $(c.box).innerHTML=(ml.length?`<p class="nmk">Not marked: ${ml.slice(0,6).map(k=>DAYS[parse(k).getDay()].slice(0,3)+" "+show(k).slice(0,5)).join(" · ")}${ml.length>6?` · +${ml.length-6} more`:""}</p>`:"")+out.map(o=>{
     const s=map[o.key]; if(s==="p")p++; if(s==="a")a++;
-    return `<div class="day ${s==="a"?"is-a":""}"><span class="dname">${DAYS[o.wd]}${o.extra?`<span class="tag">Extra <button type="button" class="rmx" data-k="${o.key}" aria-label="Remove extra session">×</button></span>`:""}</span><span class="ddate">${pad(o.dt.getDate())}/${pad(o.dt.getMonth()+1)}</span>
+    const cls=(s==="a"?"is-a":"")+(o.key===todayKey?" today":"")+(!s&&o.key<todayKey?" miss":"");
+    return `<div class="day ${cls}"><span class="dname">${DAYS[o.wd]}${o.extra?`<span class="tag">Extra <button type="button" class="rmx" data-k="${o.key}" aria-label="Remove extra session">×</button></span>`:""}</span><span class="ddate">${pad(o.dt.getDate())}/${pad(o.dt.getMonth()+1)}</span>
       <div class="tog"><button class="p" type="button" aria-pressed="${s==="p"}" data-k="${o.key}" data-v="p">Present</button><button class="a" type="button" aria-pressed="${s==="a"}" data-k="${o.key}" data-v="a">Absent</button></div></div>`;
   }).join("");
   $(c.box).querySelectorAll(".tog button").forEach(b=>b.onclick=()=>mark(k,b.dataset.k,b.dataset.v));
@@ -724,7 +747,8 @@ function renderFit(){
   else list.innerHTML=rows.map((t,ix)=>{
     const m=fitMarks(t), nn=Math.max(1,+t.n||4), filled=m.filter(Boolean).length, pres=m.filter(x=>x==="p").length, full=filled===m.length, isSoon=(m.length-filled)<=1;
     if(isSoon) soon++;
-    const boxes=m.map((x,i)=>`<button type="button" class="fc ${x}" data-id="${t.id}" data-i="${i}" aria-label="Session ${i+1}"><span class="fd">${t.start?ddmm(addDays(t.start,7*i)):"#"+(i+1)}</span><span class="fm">${x==="p"?"✓":x==="a"?"✗":""}</span></button>`).join("");
+    const boxes=m.map((x,i)=>{ const k=t.start?addDays(t.start,7*i):null, td=k===todayKey, ms=!x&&k&&k<todayKey;
+      return `<button type="button" class="fc ${x}${td?" today":""}${ms?" miss":""}" data-id="${t.id}" data-i="${i}" aria-label="Session ${i+1}"><span class="fd">${k?ddmm(k):"#"+(i+1)}</span><span class="fm">${x==="p"?"✓":x==="a"?"✗":""}</span>${ms?`<span class="fx">!</span>`:""}</button>`; }).join("");
     const end=full?`<button type="button" class="frn" data-renew="${t.id}">Renew</button>`:`<span class="fct">${pres}/${nn}</span>`;
     const nextTue=t.start?addDays(t.start,7*m.length):lastTue();
     const rnw=FITRENEW===t.id?`<div class="fed"><div class="row" style="align-items:end"><label>Renew from<select class="fr-date">${tueOptions(nextTue)}</select></label>
@@ -742,8 +766,9 @@ function renderFit(){
     return `<div class="fr${isSoon?" soon":""}" data-row="${t.id}"><div class="fn"><span class="fno">${ix+1}</span><button type="button" class="fnm" data-rn="${t.id}"></button>${+t.renewals?`<small>×${+t.renewals}</small>`:""}<button type="button" class="x ed" data-edit="${t.id}">${FITOPEN===t.id?"Close":"Edit"}</button></div>${end}<div class="fbx">${boxes}</div>${rnw}${ed}</div>`;
   }).join("");
   list.querySelectorAll(".fr").forEach(r=>{ const t=FIT.find(x=>x.id===r.dataset.row); r.querySelector(".fnm").textContent=t.name; const ni=r.querySelector(".fe-name"); if(ni) ni.value=t.name; });
-  const byDay={};
-  FIT.forEach(t=>{ if(!t.start) return; fitMarks(t).forEach((x,i)=>{ if(!x) return; const k=addDays(t.start,7*i); (byDay[k]=byDay[k]||{p:0,a:0})[x]++; }); });
+  const byDay={}, fmiss={};
+  FIT.forEach(t=>{ if(!t.start) return; fitMarks(t).forEach((x,i)=>{ const k=addDays(t.start,7*i); if(!x){ if(k<todayKey) fmiss[k]=(fmiss[k]||0)+1; return; } (byDay[k]=byDay[k]||{p:0,a:0})[x]++; }); });
+  missLine($("fitMiss"),fmiss,true);
   const lastDay=Object.keys(byDay).sort().pop();
   if(lastDay){ const c=byDay[lastDay]; $("fitLast").innerHTML=`<span>Tue ${ddmm(lastDay)}</span><span class="ok">✓ Present <b>${c.p}</b></span><span class="bad">✗ Absent <b>${c.a}</b></span>`; $("fitLast").hidden=false; }
   else $("fitLast").hidden=true;
@@ -815,7 +840,12 @@ let TCUR="safwa", SW=[], TOPEN=null, TEDIT=null, TOLD=null;
 
 function nextTrain(team,k){ const d=TM(team).days; for(let i=0;i<14;i++){ const kk=addDays(k,i); if(d.includes(parse(kk).getDay())) return kk; } return k; }
 function sessKeys(team,start,n){ const out=[]; let k=nextTrain(team,start); while(out.length<n){ out.push(k); k=nextTrain(team,addDays(k,1)); } return out; }
-const nOf=s=>Math.max(1,+s.n||TM(s.team).n);
+/* one-month card: from the start date to the same date next month, that end day included */
+function monthEnd(start){ const d=parse(start), y=d.getFullYear(), m=d.getMonth()+1, last=new Date(y,m+1,0).getDate(); return keyOf(new Date(y,m,Math.min(d.getDate(),last))); }
+function monthKeys(team,start){ const end=monthEnd(start), out=[]; let k=nextTrain(team,start); while(k<=end){ out.push(k); k=nextTrain(team,addDays(k,1)); } return out; }
+/* never drop a marked box: if older data has marks past the month, keep showing them */
+function teamKeys(s){ const base=monthKeys(s.team,s.start), src=s.marks||[]; let last=0; src.forEach((x,i)=>{ if(x) last=i+1; }); return last>base.length?sessKeys(s.team,s.start,last):base; }
+const nOf=s=>teamKeys(s).length;
 function marksOf(s){ const n=nOf(s), m=(s.marks||[]).slice(0,n); while(m.length<n) m.push(""); return m; }
 function dayOpts(team,sel,back=60,fwd=30){ const out=[]; let k=nextTrain(team,addDays(todayKey,-back)); const end=addDays(todayKey,fwd); while(k<=end){ out.push(k); k=nextTrain(team,addDays(k,1)); } if(sel&&!out.includes(sel)) out.push(sel); out.sort();
   return out.map(k=>`<option value="${k}"${k===sel?" selected":""}>${wd(k)} ${ddmm(k)}/${parse(k).getFullYear()}</option>`).join(""); }
@@ -840,12 +870,11 @@ async function delSw(id){
 function renderTabs(){
   TEAMS.forEach(t=>{ const b=document.querySelector(`.tabs button[data-tab="${t.id}"]`); if(b) b.classList.toggle("due",SW.some(s=>s.team===t.id&&(isSoon(s)||teamEnded(s)))); });
 }
-function teamEnded(s){ const n=marksOf(s).length; return sessKeys(s.team,s.start,n)[n-1]<todayKey; }
-function isSoon(s){ const m=marksOf(s); return m.filter(x=>!x).length<=1; }
+function teamEnded(s){ const ks=teamKeys(s); return (ks.length?ks[ks.length-1]:monthEnd(s.start))<todayKey; }
+function isSoon(s){ return teamKeys(s).filter(k=>k>=todayKey).length<=1; }
 function teamLine(no,team,x,cur,idx){
   const n=x.marks?x.marks.length:(+x.n||TM(team).n), p=x.marks?x.marks.filter(v=>v==="p").length:(+x.p||0), a=x.marks?x.marks.filter(v=>v==="a").length:(+x.a||0);
-  const ks=x.start?sessKeys(team,x.start,n):null;
-  const range=ks?`${yy(ks[0])} → ${yy(ks[ks.length-1])}`:"No date";
+  const range=x.start?`${yy(x.start)} → ${yy(monthEnd(x.start))}`:"No date";
   const del=cur?"":`<button type="button" class="x fh-del" data-hi="${idx}">Delete</button>`;
   return `<div class="fh${cur?" cur":""}"><b>#${no}</b><span>${range}</span><span class="fhs">✓ ${p} · ✗ ${a}${cur?" · now":""}</span>${del}</div>`;
 }
@@ -857,8 +886,7 @@ function histHtml(s){
   if(unrec) out+=`<p class="note" style="margin:0">${unrec} older renewal${unrec>1?"s":""} without details.</p>`;
   out+= TOLD===s.id ? `<div class="fold">
       <div class="row"><label>Start<select class="fo-s">${dayOpts(s.team,null,400,0)}</select></label></div>
-      <div class="row"><label>Sessions<input class="fo-n" type="number" inputmode="numeric" min="1" max="40" value="${TM(s.team).n}"></label>
-      <label>Present<input class="fo-p" type="number" inputmode="numeric" min="0" value="${TM(s.team).n}"></label>
+      <div class="row"><label>Present<input class="fo-p" type="number" inputmode="numeric" min="0" value="0"></label>
       <label>Absent<input class="fo-a" type="number" inputmode="numeric" min="0" value="0"></label></div>
       <div class="row" style="align-items:center"><button type="button" class="btn fo-save" style="flex:0 0 auto">Save</button><button type="button" class="x fo-no" style="flex:0 0 auto">Cancel</button></div></div>`
     : `<button type="button" class="x fo-open" style="align-self:flex-start">+ Add old subscription</button>`;
@@ -867,22 +895,22 @@ function histHtml(s){
 function renderTeam(){
   renderTabs();
   const T=TM(TCUR), rows=SW.filter(s=>s.team===TCUR).sort((a,b)=>(a.order||0)-(b.order||0));
-  let soon=0;
+  let soon=0; const tmiss={};
   if(!rows.length) $("tList").innerHTML=`<p class="empty">No swimmers in ${T.name} yet. Open “Edit swimmers” below and add the first name.</p>`;
   else $("tList").innerHTML=rows.map((s,ix)=>{
-    const m=marksOf(s), n=m.length, ks=sessKeys(s.team,s.start,n), filled=m.filter(Boolean).length, pres=m.filter(x=>x==="p").length;
-    const ended=ks[n-1]<todayKey, full=filled===n||ended, sn=isSoon(s)||ended; if(sn) soon++;
-    const boxes=m.map((x,i)=>`<button type="button" class="fc ${x}${ks[i]===todayKey?" today":""}" data-id="${s.id}" data-i="${i}" aria-label="${wd(ks[i])} ${ddmm(ks[i])}"><span class="fw">${wd(ks[i])}</span><span class="fd">${ddmm(ks[i])}${x?` <span class="fm">${x==="p"?"✓":"✗"}</span>`:""}</span></button>`).join("");
+    const m=marksOf(s), n=m.length, ks=teamKeys(s), filled=m.filter(Boolean).length, pres=m.filter(x=>x==="p").length;
+    const ended=teamEnded(s), full=filled===n||ended, sn=isSoon(s)||ended; if(sn) soon++;
+    const boxes=m.map((x,i)=>{ const td=ks[i]===todayKey, ms=!x&&ks[i]<todayKey; if(ms) tmiss[ks[i]]=(tmiss[ks[i]]||0)+1;
+      return `<button type="button" class="fc ${x}${td?" today":""}${ms?" miss":""}" data-id="${s.id}" data-i="${i}" aria-label="${wd(ks[i])} ${ddmm(ks[i])}"><span class="fw">${wd(ks[i])}</span><span class="fd">${ddmm(ks[i])}${x?` <span class="fm">${x==="p"?"✓":"✗"}</span>`:""}${ms?` <span class="fx">!</span>`:""}</span></button>`; }).join("");
     const end=full?`<button type="button" class="frn" data-rn="${s.id}">Renew</button>`:`<span class="fct">${pres}/${n}</span>`;
-    const nextK=nextTrain(s.team,addDays(ks[n-1],1));
+    const nextK=nextTrain(s.team,addDays(monthEnd(s.start),1));
     const op=TOPEN===s.id?`<div class="fed">
         <button type="button" class="btn sh-go" style="align-self:flex-start">Share card</button>
         <div class="row" style="align-items:end"><label>Renew from<select class="fr-date">${dayOpts(s.team,nextK)}</select></label>
         <button type="button" class="btn alt fr-go" style="flex:0 0 auto">Renew</button><button type="button" class="x fr-no" style="flex:0 0 auto">Close</button></div>${histHtml(s)}</div>`:"";
     const ed=TEDIT===s.id?`<div class="fed">
         <div class="row"><label style="flex:0 1 80px">Position<input class="fe-pos" type="number" inputmode="numeric" min="1" max="${rows.length}" value="${ix+1}"></label><label>Name<input class="fe-name" maxlength="40" autocomplete="off"></label></div>
-        <div class="row"><label style="flex:0 1 90px">Sessions<input class="fe-n" type="number" inputmode="numeric" min="1" max="40" value="${n}"></label>
-        <label style="flex:0 1 90px">Renewals<input class="fe-r" type="number" inputmode="numeric" min="0" value="${+s.renewals||0}"></label>
+        <div class="row"><label style="flex:0 1 90px">Renewals<input class="fe-r" type="number" inputmode="numeric" min="0" value="${+s.renewals||0}"></label>
         <label class="full">Start date<input class="fe-s" type="date" value="${s.start}"></label></div>
         <div class="row" style="align-items:center">
           <button type="button" class="btn fe-save" style="flex:0 0 auto">Save</button>
@@ -893,13 +921,13 @@ function renderTeam(){
   }).join("");
   $("tList").querySelectorAll(".fr").forEach(r=>{ const s=SW.find(x=>x.id===r.dataset.row); r.querySelector(".fnm").textContent=s.name; const ni=r.querySelector(".fe-name"); if(ni) ni.value=s.name; });
   const byDay={};
-  rows.forEach(s=>{ const m=marksOf(s), ks=sessKeys(s.team,s.start,m.length); m.forEach((x,i)=>{ if(!x) return; (byDay[ks[i]]=byDay[ks[i]]||{p:0,a:0})[x]++; }); });
+  missLine($("tMiss"),tmiss,true);
+  rows.forEach(s=>{ const m=marksOf(s), ks=teamKeys(s); m.forEach((x,i)=>{ if(!x) return; (byDay[ks[i]]=byDay[ks[i]]||{p:0,a:0})[x]++; }); });
   const lastDay=Object.keys(byDay).sort().pop();
   if(lastDay){ const c=byDay[lastDay]; $("tLast").innerHTML=`<span>${wd(lastDay)} ${ddmm(lastDay)}</span><span class="ok">✓ Present <b>${c.p}</b></span><span class="bad">✗ Absent <b>${c.a}</b></span>`; $("tLast").hidden=false; }
   else $("tLast").hidden=true;
-  $("tSum").innerHTML=`<span>Swimmers: <b>${rows.length}</b></span><span>Need renewal soon: <b>${soon}</b></span><span>${T.days.map(d=>SHORT[d]).join(" · ")} · ${T.n} sessions</span>`;
-  $("tHow").textContent=`Tap any box to change it: empty → ✓ Present → ✗ Absent → empty. Tap a name to share the card or renew it. Orange name = 1 session left or finished.`;
-  if(!$("tN").value||$("tN").dataset.team!==TCUR){ $("tN").value=T.n; $("tN").dataset.team=TCUR; }
+  $("tSum").innerHTML=`<span>Swimmers: <b>${rows.length}</b></span><span>Need renewal soon: <b>${soon}</b></span><span>${T.days.map(d=>SHORT[d]).join(" · ")} · 1 month card</span>`;
+  $("tHow").textContent=`Tap any box to change it: empty → ✓ Present → ✗ Absent → empty. Blue frame = today. Yellow ! = a day that passed without a mark. Tap a name to share the card or renew it. Orange name = 1 session left or the month is over.`;
 }
 
 
@@ -922,8 +950,8 @@ $("tList").addEventListener("click",async e=>{
   if(e.target.closest(".fo-open")){ TOLD=s.id; renderTeam(); return; }
   if(e.target.closest(".fo-no")){ TOLD=null; renderTeam(); return; }
   if(e.target.closest(".fo-save")){
-    const st=row.querySelector(".fo-s").value, n=parseInt(row.querySelector(".fo-n").value,10), p=parseInt(row.querySelector(".fo-p").value,10), a=parseInt(row.querySelector(".fo-a").value,10);
-    if(!(n>=1&&n<=40)||!(p>=0)||!(a>=0)||p+a>n){ fail("Check the numbers: present + absent can't be more than sessions."); return; }
+    const st=row.querySelector(".fo-s").value, n=monthKeys(s.team,st).length, p=parseInt(row.querySelector(".fo-p").value,10), a=parseInt(row.querySelector(".fo-a").value,10);
+    if(!(p>=0)||!(a>=0)||p+a>n){ fail(`Check the numbers: that month has ${n} sessions, so present + absent can't be more than ${n}.`); return; }
     TOLD=null; teamSave(s.id,{hist:[...(s.hist||[]),{start:st,n,p,a}],renewals:(+s.renewals||0)+1}); return;
   }
   const hd=e.target.closest(".fh-del");
@@ -933,17 +961,15 @@ $("tList").addEventListener("click",async e=>{
     teamSave(s.id,{hist:h,renewals:Math.max(h.length,(+s.renewals||0)-1),prev:null}); return;
   }
   if(e.target.closest(".fr-go")){ const st=row.querySelector(".fr-date").value; TOPEN=null;
-    teamSave(s.id,{prev:{marks:marksOf(s),renewals:+s.renewals||0,start:s.start,n:nOf(s)},hist:[...(s.hist||[]),{start:s.start,marks:marksOf(s),n:nOf(s)}],marks:Array(TM(s.team).n).fill(""),n:TM(s.team).n,renewals:(+s.renewals||0)+1,start:st}); return; }
+    teamSave(s.id,{prev:{marks:marksOf(s),renewals:+s.renewals||0,start:s.start},hist:[...(s.hist||[]),{start:s.start,marks:marksOf(s),n:nOf(s)}],marks:[],n:undefined,renewals:(+s.renewals||0)+1,start:st}); return; }
   if(e.target.closest(".fe-save")){
-    const name=row.querySelector(".fe-name").value.trim(), n=parseInt(row.querySelector(".fe-n").value,10), r=parseInt(row.querySelector(".fe-r").value,10), st=row.querySelector(".fe-s").value;
-    if(!name||!(n>=1&&n<=40)||!(r>=0)||!st){ fail("Check the name, sessions (1 to 40), renewals and start date."); return; }
-    const lastMarked=marksOf(s).reduce((a,x,i)=>x?i+1:a,0);
-    if(n<lastMarked){ fail(`Can't go below ${lastMarked} sessions: session ${lastMarked} is already marked.`); return; }
+    const name=row.querySelector(".fe-name").value.trim(), r=parseInt(row.querySelector(".fe-r").value,10), st=row.querySelector(".fe-s").value;
+    if(!name||!(r>=0)||!st){ fail("Check the name, renewals and start date."); return; }
     const pos=parseInt(row.querySelector(".fe-pos").value,10);
-    TEDIT=null; await teamSave(s.id,{name,n,renewals:r,marks:marksOf({...s,n}),start:st});
+    TEDIT=null; await teamSave(s.id,{name,n:undefined,renewals:r,marks:s.marks||[],start:st});
     if(pos>=1) await teamMove(s.id,pos); return;
   }
-  if(e.target.closest(".fe-undo")&&s.prev){ TEDIT=null; teamSave(s.id,{marks:s.prev.marks,renewals:s.prev.renewals,start:s.prev.start,n:s.prev.n||TM(s.team).n,prev:null,hist:(s.hist||[]).slice(0,-1)}); return; }
+  if(e.target.closest(".fe-undo")&&s.prev){ TEDIT=null; teamSave(s.id,{marks:s.prev.marks,renewals:s.prev.renewals,start:s.prev.start,n:undefined,prev:null,hist:(s.hist||[]).slice(0,-1)}); return; }
   const del=e.target.closest(".fe-del");
   if(del){
     if(!del.classList.contains("arm")){ del.classList.add("arm"); del.textContent="Sure? Tap again"; setTimeout(()=>{ if(del.isConnected){del.classList.remove("arm"); del.textContent="Delete swimmer";} },3000); return; }
@@ -952,19 +978,18 @@ $("tList").addEventListener("click",async e=>{
 });
 $("tAddF").addEventListener("submit",async e=>{
   e.preventDefault(); const er=$("tAddErr"); er.hidden=true;
-  const name=$("tName").value.trim(), n=parseInt($("tN").value,10), st=$("tStart").value;
+  const name=$("tName").value.trim(), st=$("tStart").value;
   if(!name){er.textContent="Enter the swimmer's name.";er.hidden=false;return;}
   if(!st){er.textContent="Pick the start date.";er.hidden=false;return;}
-  if(!(n>=1&&n<=40)){er.textContent="Sessions must be 1 to 40.";er.hidden=false;return;}
   const id="s"+Date.now().toString(36);
   $("tName").value=""; $("tName").focus();
-  await addSw({id,team:TCUR,name,n,start:st,marks:Array(n).fill(""),renewals:0,hist:[],order:Date.now()});
+  await addSw({id,team:TCUR,name,start:st,marks:[],renewals:0,hist:[],order:Date.now()});
 });
 $("tStart").value=todayKey;
 
 /* SHARE CARD — same TRAINING CARD as TAREK, with the team name */
 async function teamCardBlob(s){
-  const m=marksOf(s), n=m.length, ks=sessKeys(s.team,s.start,n), C=CARD_C, FF=CARD_FF;
+  const m=marksOf(s), n=m.length, ks=teamKeys(s), C=CARD_C, FF=CARD_FF;
   const states=m.map((x,i)=>x||(ks[i]>=todayKey?"u":"n"));
   const pr=m.filter(x=>x==="p").length, ab=m.filter(x=>x==="a").length, left=m.filter(x=>!x).length, done=!left||ks[n-1]<todayKey;
   try{await Promise.all([document.fonts.load('400 28px "IBM Plex Sans"'),document.fonts.load('600 30px "IBM Plex Sans"')]);}catch(e){}
@@ -980,7 +1005,7 @@ async function teamCardBlob(s){
   y+=96+44;
   ctx.fillStyle=C.ink; ctx.font="600 40px "+FF; ctx.fillText(s.name,PAD,y+30);
   ctx.fillStyle=C.chip; ctx.font="italic 600 34px "+FF; ctx.textAlign="right"; ctx.fillText(TM(s.team).name.toUpperCase()+" TEAM",W-PAD,y+30); ctx.textAlign="left"; y+=54;
-  ctx.fillStyle=C.muted; ctx.font="400 28px "+FF; ctx.fillText(yy(ks[0])+" → "+yy(ks[n-1]),PAD,y+22); y+=48;
+  ctx.fillStyle=C.muted; ctx.font="400 28px "+FF; ctx.fillText(yy(s.start)+" → "+yy(monthEnd(s.start)),PAD,y+22); y+=48;
   const rope=yy2=>{ ctx.strokeStyle=C.deep; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(PAD,yy2); ctx.lineTo(W-PAD,yy2); ctx.stroke(); let i=0; for(let x=PAD+8;x<=W-PAD-8;x+=28,i++){ ctx.fillStyle=i%5===0?C.deep:C.chip; ctx.beginPath(); ctx.arc(x,yy2,8,0,7); ctx.fill(); } };
   rope(y); y+=44;
   const colW=(W-2*PAD-40)/2;
