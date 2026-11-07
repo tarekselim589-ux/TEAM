@@ -185,10 +185,9 @@ input[type=date]::-webkit-date-and-time-value{text-align:left;margin:0}
 .fc.miss .fd,.fc.miss .fw{color:var(--warn)}
 .fc .fx{font:700 12px var(--body);color:var(--warn)}
 .nmk{font-size:13px;color:var(--warn);background:var(--goldtint);border-radius:10px;padding:7px 12px;margin:0;font-weight:500}
-.day.today{outline:2.5px solid var(--blue);outline-offset:-2px;border-radius:10px;padding-inline:8px}
-.day.today .ddate,.day.today .dname{color:var(--blue)}
-.day.miss{background:var(--goldtint);border:1.5px dashed var(--warn);border-radius:10px;padding-inline:8px}
-.day.miss .ddate::after{content:" !";color:var(--warn);font-weight:700}
+.day .tog{border:2px solid transparent;border-radius:10px;padding:3px}
+.day.today .tog{border-color:var(--blue)}
+.day.miss .tog{border:2px dashed var(--warn);background:var(--goldtint)}
 .nmk+.day{border-top:0}
 .foot{display:flex;flex-direction:column;gap:12px}
 .arow{display:grid;grid-template-columns:28px minmax(0,1fr) 80px;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
