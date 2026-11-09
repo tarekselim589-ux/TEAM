@@ -173,12 +173,6 @@ select,input{min-width:0;height:42px;margin:0}
 input[type=date]{-webkit-appearance:none;appearance:none;display:block;text-align:left}
 input[type=date]::-webkit-date-and-time-value{text-align:left;margin:0}
 .full{flex:1 1 100%!important}
-#p-team .fbx{display:flex;flex-wrap:wrap;gap:4px}
-#p-team .fc{height:26px;padding:0 6px;border-radius:6px;flex-direction:row;gap:3px;line-height:1;white-space:nowrap}
-#p-team .fc .fd{display:inline-flex;align-items:center;gap:2px;font-size:13px}
-#p-team .fc .fw{font:500 11px var(--body);color:var(--muted)}
-#p-team .fc .fm{font:700 12px var(--body)}
-#p-team .fc.p .fw,#p-team .fc.a .fw{color:inherit}
 .fc.today{border:2.5px solid var(--blue)!important;color:var(--blue)}
 .fc.today .fd,.fc.today .fw{color:var(--blue)}
 .fc.miss{border:1.5px dashed var(--warn);background:var(--goldtint);color:var(--warn)}
@@ -193,9 +187,56 @@ input[type=date]::-webkit-date-and-time-value{text-align:left;margin:0}
 .arow{display:grid;grid-template-columns:28px minmax(0,1fr) 80px;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
 .arow:first-child{border-top:0}
 .arow .an{font-weight:600;overflow-wrap:anywhere}
+/* GLASS — light frosted look (dark mode keeps a dark glass) */
+:root{--bgA:#CFE3FF;--bgB:#EAF3FF;--bgC:#D4F3EA;--blobA:rgba(127,178,255,.55);--blobB:rgba(127,224,200,.5);
+  --glass:rgba(255,255,255,.55);--glass2:rgba(255,255,255,.42);--glassbd:rgba(255,255,255,.88);--glassSh:0 6px 22px rgba(40,80,140,.10);--bar:rgba(226,238,255,.82);
+  --mk:#7A4FBF;--mktint:rgba(122,79,191,.14);--strokeIn:rgba(120,140,170,.25)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bgA:#0B1F3A;--bgB:#10304F;--bgC:#0D3D45;--blobA:rgba(47,123,255,.35);--blobB:rgba(25,179,154,.3);
+  --glass:rgba(255,255,255,.07);--glass2:rgba(255,255,255,.05);--glassbd:rgba(255,255,255,.16);--glassSh:0 6px 22px rgba(0,0,0,.3);--bar:rgba(11,31,58,.8);--mk:#C3A2FF;--mktint:rgba(195,162,255,.16);--strokeIn:rgba(255,255,255,.14)}}
+:root[data-theme="dark"]{--bgA:#0B1F3A;--bgB:#10304F;--bgC:#0D3D45;--blobA:rgba(47,123,255,.35);--blobB:rgba(25,179,154,.3);
+  --glass:rgba(255,255,255,.07);--glass2:rgba(255,255,255,.05);--glassbd:rgba(255,255,255,.16);--glassSh:0 6px 22px rgba(0,0,0,.3);--bar:rgba(11,31,58,.8);--mk:#C3A2FF;--mktint:rgba(195,162,255,.16);--strokeIn:rgba(255,255,255,.14)}
+body{background:var(--bgB)}
+.bgfx{position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(circle at 6% 30%,var(--blobA),transparent 42%),radial-gradient(circle at 96% 86%,var(--blobB),transparent 44%),linear-gradient(160deg,var(--bgA),var(--bgB) 45%,var(--bgC))}
+.card,.flast,.total.all,.flist .fr,.dlist .day{background:var(--glass);border:1px solid var(--glassbd);box-shadow:var(--glassSh);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.card{border-radius:18px}
+.tabs{background:var(--bar);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-radius:14px;padding-inline:6px}
+.tabs button:not([aria-selected="true"]){background:var(--glass);border-color:var(--glassbd)}
+select,input{background:var(--glass2);border-color:var(--glassbd)}
+.x,.eye,.hshare{background:var(--glass2);border-color:var(--glassbd)}
+.fed{background:var(--glass2);border:1px solid var(--glassbd)}
+.nmk{border:1px solid rgba(208,131,22,.35)}
+/* privates: one glass card per session, colour strip, one switch */
+.dlist{display:flex;flex-direction:column;gap:8px}
+.dlist .day,.dlist .day:first-child{grid-template-columns:minmax(0,1fr) auto;padding:10px 12px;border-radius:16px;border-left:6px solid var(--glassbd)}
+.dlist .day.s-p{border-left-color:var(--ok)}
+.dlist .day.s-a{border-left-color:var(--bad)}
+.dlist .day.s-mk{border-left-color:var(--mk)}
+.dd{display:flex;flex-direction:column;line-height:1.15;min-width:0}
+.dlist .ddate{font-size:23px;font-weight:700}
+.dlist .dname{font-size:12.5px;color:var(--muted);font-weight:500}
+.tag.mk{color:var(--mk);background:var(--mktint);padding:0 8px;letter-spacing:.03em}
+.dlist .tog,.dlist .day .tog{gap:0;padding:0;border:1px solid var(--glassbd);border-radius:12px;overflow:hidden;background:var(--glass2)}
+.dlist .tog button{border:0;border-radius:0;background:transparent;padding:9px 13px}
+.dlist .tog button+button{border-left:1px solid var(--strokeIn)}
+.dlist .tog .p[aria-pressed="true"]{background:var(--oktint);color:var(--ok)}
+.dlist .tog .a[aria-pressed="true"]{background:var(--badtint);color:var(--bad)}
+.dlist .day.today .tog{outline:2.5px solid var(--blue);outline-offset:3px}
+.dlist .day.miss .tog{outline:2px dashed var(--warn);outline-offset:3px;background:var(--goldtint)}
+.dlist .nmk{margin:0}
+/* teams and Fitness: one glass card per person, 4 boxes a row, day over date */
+.flist{display:flex;flex-direction:column;gap:10px}
+.flist .fr,.flist .fr:first-child{padding:12px 14px;border-radius:18px}
+.fbx{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.fc{height:auto;min-height:50px;padding:6px 2px;border-radius:12px;flex-direction:column;gap:1px;line-height:1.15;background:var(--glass2);border:1px solid var(--glassbd);white-space:nowrap}
+.fc .fw{font:500 11.5px var(--body);color:var(--muted)}
+.fc .fd{font:700 15px var(--display);color:var(--blue);display:inline-flex;align-items:center;gap:3px}
+.fc.p .fw,.fc.a .fw{color:inherit}
+.fc.p .fd,.fc.a .fd{color:inherit}
+.flist .empty{background:var(--glass);border:1px solid var(--glassbd);border-radius:18px;padding:16px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
+<div class="bgfx" aria-hidden="true"></div>
 <div class="wrap">
   <div class="top"><h1>TEAM</h1><button class="x" type="button" id="outBtn" hidden>Sign out</button></div>
   <p class="warn" id="fail" role="alert" hidden></p>
@@ -224,7 +265,7 @@ input[type=date]::-webkit-date-and-time-value{text-align:left;margin:0}
   <section class="panel" id="p-team">
     <div class="sub" id="tSum"></div>
     <p class="nmk" id="tMiss" hidden></p>
-    <div class="card" id="tList"></div>
+    <div class="flist" id="tList"></div>
     <p class="note" id="tHow"></p>
     <div class="flast" id="tLast" hidden></div>
     <details class="pvEd" id="tAddWrap"><summary class="x">Edit swimmers</summary>
@@ -245,7 +286,7 @@ input[type=date]::-webkit-date-and-time-value{text-align:left;margin:0}
   <section class="panel" id="p-fit" hidden>
     <div class="sub" id="fitSum"></div>
     <p class="nmk" id="fitMiss" hidden></p>
-    <div class="card" id="fitList"></div>
+    <div class="flist" id="fitList"></div>
     <p class="note">Tap any box to change it: empty → ✓ Present → ✗ Absent → empty. Each ✗ adds a make-up Tuesday at the end. Tap a name to renew it from a new Tuesday. Orange name = 1 session left or finished.</p>
     <div class="flast" id="fitLast" hidden></div>
     <details class="pvEd" id="fitEdWrap"><summary class="x">Edit trainees</summary>
@@ -436,49 +477,77 @@ const CARD_LOGO="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABGAAAAJOCAMAAADPp
 const CARD_FF='"IBM Plex Sans","Helvetica Neue",Arial,sans-serif';
 const CARD_C={ink:"#0F1C2C",muted:"#5D6B7D",line:"#DBE3EC",chip:"#2B63C9",ok:"#1E7A4C",oktint:"#E3F4EA",bad:"#B23A2E",badtint:"#FBE7E4",deep:"#123B7A"};
 async function cardBlob(k,pk){
-  const c=CFG[k], map=S.att[k]||{}, out=sessions(k,pk), n=c.n, C=CARD_C, FF=CARD_FF;
-  const states=out.map(o=>map[o.key]==="p"?"p":map[o.key]==="a"?"a":(o.key>=todayKey?"u":"n"));
-  const pr=states.filter(x=>x==="p").length, ab=states.filter(x=>x==="a").length, left=Math.max(0,n-pr), done=pr>=n;
-  try{await Promise.all([document.fonts.load('400 28px "IBM Plex Sans"'),document.fonts.load('600 30px "IBM Plex Sans"')]);}catch(e){}
+  const c=CFG[k], map=S.att[k]||{}, out=sessions(k,pk), n=c.n, p2=x=>String(x).padStart(2,"0");
+  let reg=0;
+  const rows=out.map(o=>{ const st=map[o.key]==="p"?"p":map[o.key]==="a"?"a":(o.key>=todayKey?"u":"n");
+    const mk=!o.extra&&(reg++)>=n; return {wd:SHORT[o.wd],date:p2(o.dt.getDate())+"/"+p2(o.dt.getMonth()+1),st,tag:o.extra?"EXTRA":mk?"MAKE-UP":""}; });
+  const pr=rows.filter(r=>r.st==="p").length, ab=rows.filter(r=>r.st==="a").length;
+  return glassCard({name:c.name,label:"PRIVATE · "+n+" SESSIONS",range:show(out[0].key)+" → "+show(out[out.length-1].key),rows,of:n,pr,ab,left:Math.max(0,n-pr),done:pr>=n,doneText:"PACKAGE COMPLETE"});
+}
+/* GLASS CARD — the image sent to parents; one drawing for privates, teams and Fitness.
+   o={name,label,range,rows:[{wd,date,st:"p"|"a"|"u"|"n",tag}],of,pr,ab,left,done,doneText} */
+async function glassCard(o){
+  const FF=CARD_FF, W=1080, PAD=56, rows=o.rows, half=Math.ceil(rows.length/2), rowH=100, gap=14;
+  const BLUE="#1F5FBF", INK="#0F1C2C", MUTED="#5D6B7D", OK="#1B7A4C", BAD="#B23A2E", MK="#7A4FBF";
+  try{await Promise.all([document.fonts.load('400 28px "IBM Plex Sans"'),document.fonts.load('600 30px "IBM Plex Sans"'),document.fonts.load('italic 600 30px "IBM Plex Sans"')]);}catch(e){}
   const lg=await new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=CARD_LOGO;});
-  const W=1080,PAD=64,rowH=84,rowsPerCol=Math.ceil(out.length/2), cv=document.createElement("canvas"), ctx=cv.getContext("2d");
-  const H=1200+rowsPerCol*rowH, SC=2; cv.width=W*SC; cv.height=H*SC; ctx.scale(SC,SC); ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high";
-  ctx.fillStyle="#fff"; ctx.fillRect(0,0,W,H);
-  if(lg){ const ww=W*.8, hh=ww*lg.height/lg.width; ctx.globalAlpha=.06; ctx.drawImage(lg,(W-ww)/2,(H-hh)/2-80,ww,hh); ctx.globalAlpha=1; }
-  let y=PAD; ctx.textBaseline="alphabetic";
-  ctx.font="italic 600 60px "+FF; const t1="TRAINING CARD", tw=ctx.measureText(t1).width;
-  ctx.fillStyle=C.chip; ctx.fillRect(PAD,y,tw+64,96); ctx.fillStyle="#fff"; ctx.fillText(t1,PAD+32,y+68);
-  if(lg){ const lw=250, lh=lw*lg.height/lg.width; ctx.drawImage(lg,W-PAD-lw,y+48-lh/2,lw,lh); }
-  y+=96+44;
-  ctx.fillStyle=C.ink; ctx.font="600 40px "+FF; ctx.fillText(c.name,PAD,y+30); y+=54;
-  ctx.fillStyle=C.muted; ctx.font="400 28px "+FF; ctx.fillText(show(out[0].key)+" → "+show(out[out.length-1].key),PAD,y+22); y+=48;
-  const rope=yy=>{ ctx.strokeStyle=C.deep; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(PAD,yy); ctx.lineTo(W-PAD,yy); ctx.stroke(); let i=0; for(let x=PAD+8;x<=W-PAD-8;x+=28,i++){ ctx.fillStyle=i%5===0?C.deep:C.chip; ctx.beginPath(); ctx.arc(x,yy,8,0,7); ctx.fill(); } };
-  rope(y); y+=44;
-  const colW=(W-2*PAD-40)/2, p2=x=>String(x).padStart(2,"0");
-  const chip=(x,yy,w,txt,fg,bg,bd)=>{ ctx.fillStyle=bg; ctx.fillRect(x,yy,w,50); ctx.strokeStyle=bd; ctx.lineWidth=2; ctx.strokeRect(x,yy,w,50); ctx.fillStyle=fg; let fs=24; ctx.font="600 "+fs+"px "+FF; while(fs>14&&ctx.measureText(txt).width>w-14){fs--;ctx.font="600 "+fs+"px "+FF;} ctx.textAlign="center"; ctx.fillText(txt,x+w/2,yy+34); ctx.textAlign="left"; };
-  out.forEach((o,i)=>{ const col=i<rowsPerCol?0:1, r=i%rowsPerCol, x=PAD+col*(colW+40), yy=y+r*rowH, st=states[i];
-    ctx.strokeStyle=C.line; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(x,yy+rowH-6); ctx.lineTo(x+colW,yy+rowH-6); ctx.stroke();
-    ctx.fillStyle="rgba(11,87,112,.35)"; ctx.font="italic 600 34px "+FF; ctx.fillText(p2(i+1),x,yy+46);
-    ctx.fillStyle=C.ink; ctx.font="600 30px "+FF; ctx.fillText(SHORT[o.wd],x+64,yy+46);
-    ctx.fillStyle=C.chip; ctx.font="600 30px "+FF; ctx.fillText(p2(o.dt.getDate())+"/"+p2(o.dt.getMonth()+1),x+170,yy+46);
-    const cx=x+colW-130;
-    if(st==="p") chip(cx,yy+12,130,"✓ Present",C.ok,C.oktint,C.ok);
-    else if(st==="a") chip(cx,yy+12,130,"✕ Absent",C.bad,C.badtint,C.bad);
-    else if(st==="u") chip(cx,yy+12,130,"Upcoming",C.muted,"#fff",C.line);
-    else chip(cx,yy+12,130,"Not marked",C.muted,"#fff",C.line);
+  const H=PAD+104+28+132+28+half*(rowH+gap)+16+116+20+16+28+150+PAD, SC=2;
+  const cv=document.createElement("canvas"); cv.width=W*SC; cv.height=H*SC;
+  const ctx=cv.getContext("2d"); ctx.scale(SC,SC); ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high"; ctx.textBaseline="alphabetic";
+  const rr=(x,y,w,h,r)=>{ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();};
+  const glass=(x,y,w,h,r,a)=>{ ctx.save(); ctx.shadowColor="rgba(40,80,140,.12)"; ctx.shadowBlur=22; ctx.shadowOffsetY=6; rr(x,y,w,h,r); ctx.fillStyle=`rgba(255,255,255,${a||.55})`; ctx.fill(); ctx.restore(); rr(x,y,w,h,r); ctx.strokeStyle="rgba(255,255,255,.95)"; ctx.lineWidth=2; ctx.stroke(); };
+  const fit=(t,max,size,weight)=>{ let s=size; ctx.font=`${weight} ${s}px ${FF}`; while(s>12&&ctx.measureText(t).width>max){s--;ctx.font=`${weight} ${s}px ${FF}`;} };
+  /* background: soft blue to aqua with two light blobs */
+  const g=ctx.createLinearGradient(0,0,W*.45,H); g.addColorStop(0,"#CFE3FF"); g.addColorStop(.45,"#EAF3FF"); g.addColorStop(1,"#D4F3EA"); ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  const blob=(x,y,r,c)=>{ const b=ctx.createRadialGradient(x,y,0,x,y,r); b.addColorStop(0,c); b.addColorStop(1,"rgba(255,255,255,0)"); ctx.fillStyle=b; ctx.fillRect(x-r,y-r,2*r,2*r); };
+  blob(40,H*.32,420,"rgba(127,178,255,.55)"); blob(W-20,H*.86,400,"rgba(127,224,200,.5)");
+  if(lg){ const ww=W*.82, hh=ww*lg.height/lg.width; ctx.globalAlpha=.06; ctx.drawImage(lg,(W-ww)/2,(H-hh)/2,ww,hh); ctx.globalAlpha=1; }
+  let y=PAD;
+  /* title chip + logo */
+  ctx.font="italic 600 54px "+FF; const t1="TRAINING CARD", tw=ctx.measureText(t1).width;
+  rr(PAD,y,tw+64,104,28); ctx.fillStyle="rgba(31,95,191,.93)"; ctx.fill(); ctx.fillStyle="#fff"; ctx.fillText(t1,PAD+32,y+72);
+  if(lg){ const lw=250, lh=lw*lg.height/lg.width; ctx.drawImage(lg,W-PAD-lw,y+52-lh/2,lw,lh); }
+  y+=104+28;
+  /* who */
+  glass(PAD,y,W-2*PAD,132,30);
+  ctx.fillStyle=INK; fit(o.name,W-2*PAD-420,46,600); ctx.fillText(o.name,PAD+36,y+62);
+  ctx.fillStyle=MUTED; ctx.font="400 27px "+FF; ctx.fillText(o.range,PAD+36,y+104);
+  ctx.fillStyle=BLUE; fit(o.label,380,30,"italic 600"); ctx.textAlign="right"; ctx.fillText(o.label,W-PAD-36,y+104); ctx.textAlign="left";
+  y+=132+28;
+  /* sessions, two columns */
+  const colW=(W-2*PAD-gap)/2;
+  rows.forEach((r,i)=>{
+    const col=i<half?0:1, x=PAD+col*(colW+gap), yy=y+(i%half)*(rowH+gap);
+    glass(x,yy,colW,rowH,24,.6);
+    const strip=r.st==="p"?"#2EAA6E":r.st==="a"?"#DC463C":r.tag?"#8A5FD0":null;
+    if(strip){ ctx.save(); rr(x,yy,colW,rowH,24); ctx.clip(); ctx.fillStyle=strip; ctx.fillRect(x,yy,10,rowH); ctx.restore(); }
+    ctx.fillStyle="#7D93B3"; ctx.font="600 22px "+FF; ctx.fillText(String(i+1).padStart(2,"0"),x+26,yy+60);
+    ctx.fillStyle=BLUE; ctx.font="600 34px "+FF; ctx.fillText(r.date,x+70,yy+48);
+    ctx.fillStyle=MUTED; ctx.font="400 21px "+FF; ctx.fillText(r.wd,x+70,yy+80);
+    if(r.tag){ const wdw=ctx.measureText(r.wd).width; ctx.font="600 15px "+FF; const tw2=ctx.measureText(r.tag).width+16;
+      rr(x+80+wdw,yy+61,tw2,25,7); ctx.fillStyle="rgba(122,79,191,.15)"; ctx.fill(); ctx.fillStyle=MK; ctx.fillText(r.tag,x+88+wdw,yy+79); }
+    const txt=r.st==="p"?"✓ Present":r.st==="a"?"✕ Absent":r.st==="u"?"Upcoming":"Not marked";
+    ctx.font="600 20px "+FF; const pw=Math.max(118,ctx.measureText(txt).width+26), px=x+colW-pw-18, py=yy+(rowH-44)/2;
+    rr(px,py,pw,44,14);
+    ctx.fillStyle=r.st==="p"?"rgba(46,170,110,.22)":r.st==="a"?"rgba(220,70,60,.18)":"rgba(255,255,255,.65)"; ctx.fill();
+    ctx.strokeStyle=r.st==="p"?"rgba(46,170,110,.55)":r.st==="a"?"rgba(220,70,60,.5)":"rgba(160,175,195,.45)"; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle=r.st==="p"?OK:r.st==="a"?BAD:"#7B8796"; ctx.textAlign="center"; ctx.fillText(txt,px+pw/2,py+30); ctx.textAlign="left";
   });
-  y+=rowsPerCol*rowH+24; rope(y); y+=40;
-  ctx.fillStyle=C.chip; ctx.fillRect(PAD,y,W-2*PAD,110); ctx.fillStyle="#fff"; ctx.font="600 32px "+FF; ctx.fillText(done?"PACKAGE COMPLETE":"IN PROGRESS",PAD+36,y+66);
-  ctx.font="italic 600 52px "+FF; ctx.textAlign="right"; ctx.fillText(pr+" of "+n,W-PAD-36,y+72); ctx.textAlign="left"; y+=110;
-  ctx.fillStyle=C.line; ctx.fillRect(PAD,y,W-2*PAD,14); ctx.fillStyle=C.ok; ctx.fillRect(PAD,y,(W-2*PAD)*Math.min(1,pr/n),14); y+=14+36;
+  y+=half*(rowH+gap)+16;
+  /* summary */
+  glass(PAD,y,W-2*PAD,116,30);
+  ctx.fillStyle="#2A4A78"; ctx.font="600 30px "+FF; ctx.fillText(o.done?o.doneText:"IN PROGRESS",PAD+36,y+70);
+  ctx.fillStyle=BLUE; ctx.font="italic 600 58px "+FF; ctx.textAlign="right"; ctx.fillText(o.pr+" of "+o.of,W-PAD-36,y+80); ctx.textAlign="left";
+  y+=116+20;
+  rr(PAD,y,W-2*PAD,16,8); ctx.fillStyle="rgba(255,255,255,.75)"; ctx.fill();
+  const fw=(W-2*PAD)*Math.min(1,o.pr/Math.max(1,o.of)); if(fw>0){ rr(PAD,y,Math.max(16,fw),16,8); ctx.fillStyle="#2EAA6E"; ctx.fill(); }
+  y+=16+28;
   const bw=(W-2*PAD-2*20)/3;
-  const stats=[["ATTENDED",String(pr),C.ok],["REMAINING",String(left),left?C.chip:C.muted],["ABSENT",String(ab),ab?C.bad:C.muted]];
-  stats.forEach((st,i)=>{ const x=PAD+i*(bw+20); ctx.strokeStyle=C.line; ctx.lineWidth=2; ctx.strokeRect(x,y,bw,128);
-    ctx.fillStyle=C.muted; ctx.font="600 21px "+FF; ctx.textAlign="center"; ctx.fillText(st[0],x+bw/2,y+40);
-    ctx.fillStyle=st[2]; ctx.font="italic 600 60px "+FF; ctx.fillText(st[1],x+bw/2,y+102); ctx.textAlign="left"; });
-  y+=128+PAD;
-  const o2=document.createElement("canvas"); o2.width=W*SC; o2.height=Math.ceil(y*SC); o2.getContext("2d").drawImage(cv,0,0);
-  return await new Promise((res,rej)=>o2.toBlob(b=>b?res(b):rej(new Error("png")),"image/png"));
+  [["ATTENDED",o.pr,OK],["REMAINING",o.left,o.left?BLUE:MUTED],["ABSENT",o.ab,o.ab?BAD:MUTED]].forEach((s,i)=>{
+    const x=PAD+i*(bw+20); glass(x,y,bw,150,28);
+    ctx.textAlign="center"; ctx.fillStyle=MUTED; ctx.font="600 22px "+FF; ctx.fillText(s[0],x+bw/2,y+46);
+    ctx.fillStyle=s[2]; ctx.font="italic 600 66px "+FF; ctx.fillText(String(s[1]),x+bw/2,y+120); ctx.textAlign="left"; });
+  return await new Promise((res,rej)=>cv.toBlob(b=>b?res(b):rej(new Error("png")),"image/png"));
 }
 function cardOverlay(url,name){
   const ov=document.createElement("div"); ov.className="cardOv";
@@ -588,13 +657,14 @@ function renderAtt(k){
   const c=CFG[k], map=S.att[k]||{}, pk=(S.pk[k]||[]).find(p=>p.id===S.sel[k]);
   if(!pk){$(c.box).innerHTML=`<p class="empty">Sessions will appear here with their dates once you start a package.</p>`;$(c.tot).textContent=`0 of ${c.n}`;$(c.sub).innerHTML="";return;}
   const out=sessions(k,pk);
-  let p=0,a=0; const miss={};
+  let p=0,a=0,reg=0; const miss={};
   out.forEach(o=>{ if(!map[o.key]&&o.key<todayKey) miss[o.key]=0; });
   const ml=Object.keys(miss).sort().reverse();
   $(c.box).innerHTML=(ml.length?`<p class="nmk">Not marked: ${ml.slice(0,6).map(k=>DAYS[parse(k).getDay()].slice(0,3)+" "+show(k).slice(0,5)).join(" · ")}${ml.length>6?` · +${ml.length-6} more`:""}</p>`:"")+out.map(o=>{
     const s=map[o.key]; if(s==="p")p++; if(s==="a")a++;
-    const cls=(s==="a"?"is-a":"")+(o.key===todayKey?" today":"")+(!s&&o.key<todayKey?" miss":"");
-    return `<div class="day ${cls}"><span class="dname">${DAYS[o.wd]}${o.extra?`<span class="tag">Extra <button type="button" class="rmx" data-k="${o.key}" aria-label="Remove extra session">×</button></span>`:""}</span><span class="ddate">${pad(o.dt.getDate())}/${pad(o.dt.getMonth()+1)}</span>
+    const mk=!o.extra&&(reg++)>=c.n;
+    const cls=(s==="a"?"is-a s-a":s==="p"?"s-p":"")+(o.key===todayKey?" today":"")+(!s&&o.key<todayKey?" miss":"")+(!s&&(mk||o.extra)?" s-mk":"");
+    return `<div class="day ${cls}"><span class="dd"><span class="ddate">${pad(o.dt.getDate())}/${pad(o.dt.getMonth()+1)}</span><span class="dname">${DAYS[o.wd]}${o.extra?`<span class="tag">Extra <button type="button" class="rmx" data-k="${o.key}" aria-label="Remove extra session">×</button></span>`:mk?`<span class="tag mk">MAKE-UP</span>`:""}</span></span>
       <div class="tog"><button class="p" type="button" aria-pressed="${s==="p"}" data-k="${o.key}" data-v="p">Present</button><button class="a" type="button" aria-pressed="${s==="a"}" data-k="${o.key}" data-v="a">Absent</button></div></div>`;
   }).join("");
   $(c.box).querySelectorAll(".tog button").forEach(b=>b.onclick=()=>mark(k,b.dataset.k,b.dataset.v));
@@ -639,7 +709,7 @@ function buildPrivates(list){
     S.pk[k]=S.pk[k]||[]; if(!(k in S.sel))S.sel[k]=null; S.att[k]=S.att[k]||{};
     const tb=document.createElement("button"); tb.setAttribute("role","tab"); tb.dataset.tab=k; tb.textContent=p.name; $("pvTabs").appendChild(tb);
     const sec=document.createElement("section"); sec.className="panel"; sec.id="p-"+k; sec.hidden=true;
-    sec.innerHTML=`<div class="card" id="${pre}-pk"></div><div class="card"><div id="${pre}-days"></div></div><div class="total blue"><span>Attended</span><b id="${pre}-tot">0</b></div><div class="sub" id="${pre}-sub"></div><details class="pvEd"><summary class="x">Edit private</summary><form class="row editpv" style="margin-top:8px"><label>Name<input class="pvName" maxlength="40" autocomplete="off"></label><label>Sessions per package<input class="pvN" type="number" inputmode="numeric" min="1" max="100"></label><button class="btn" type="submit" style="flex:0 0 auto">Save</button></form><p class="err pvEErr" hidden></p></details><div><button class="x delpv" type="button" style="margin-top:6px">Delete private</button><p class="err pvErr" hidden></p></div>`;
+    sec.innerHTML=`<div class="card" id="${pre}-pk"></div><div class="dlist" id="${pre}-days"></div><div class="total blue"><span>Attended</span><b id="${pre}-tot">0</b></div><div class="sub" id="${pre}-sub"></div><details class="pvEd"><summary class="x">Edit private</summary><form class="row editpv" style="margin-top:8px"><label>Name<input class="pvName" maxlength="40" autocomplete="off"></label><label>Sessions per package<input class="pvN" type="number" inputmode="numeric" min="1" max="100"></label><button class="btn" type="submit" style="flex:0 0 auto">Save</button></form><p class="err pvEErr" hidden></p></details><div><button class="x delpv" type="button" style="margin-top:6px">Delete private</button><p class="err pvErr" hidden></p></div>`;
     sec.querySelector(".pvName").value=p.name; sec.querySelector(".pvN").value=CFG[k].n;
     sec.querySelector(".editpv").addEventListener("submit",async e=>{
       e.preventDefault();
@@ -747,7 +817,7 @@ function renderFit(){
     const m=fitMarks(t), nn=Math.max(1,+t.n||4), filled=m.filter(Boolean).length, pres=m.filter(x=>x==="p").length, full=filled===m.length, isSoon=(m.length-filled)<=1;
     if(isSoon) soon++;
     const boxes=m.map((x,i)=>{ const k=t.start?addDays(t.start,7*i):null, td=k===todayKey, ms=!x&&k&&k<todayKey;
-      return `<button type="button" class="fc ${x}${td?" today":""}${ms?" miss":""}" data-id="${t.id}" data-i="${i}" aria-label="Session ${i+1}"><span class="fd">${k?ddmm(k):"#"+(i+1)}</span><span class="fm">${x==="p"?"✓":x==="a"?"✗":""}</span>${ms?`<span class="fx">!</span>`:""}</button>`; }).join("");
+      return `<button type="button" class="fc ${x}${td?" today":""}${ms?" miss":""}" data-id="${t.id}" data-i="${i}" aria-label="Session ${i+1}">${k?`<span class="fw">${SHORT[parse(k).getDay()]}</span>`:""}<span class="fd">${k?ddmm(k):"#"+(i+1)} <span class="fm">${x==="p"?"✓":x==="a"?"✗":""}</span>${ms?`<span class="fx">!</span>`:""}</span></button>`; }).join("");
     const end=full?`<button type="button" class="frn" data-renew="${t.id}">Renew</button>`:`<span class="fct">${pres}/${nn}</span>`;
     const nextTue=t.start?addDays(t.start,7*m.length):lastTue();
     const rnw=FITRENEW===t.id?`<div class="fed">${t.start?`<button type="button" class="btn sh-go" style="align-self:flex-start">Share card</button>`:`<p class="note">Set a start Tuesday in Edit to share a card.</p>`}<div class="row" style="align-items:end"><label>Renew from<select class="fr-date">${tueOptions(nextTue)}</select></label>
@@ -996,50 +1066,10 @@ async function teamCardBlob(s){
 }
 /* one card drawing for teams and Fitness: o={name,label,range,ks,m,of,doneText} */
 async function rosterCardBlob(o){
-  const m=o.m, n=m.length, ks=o.ks, C=CARD_C, FF=CARD_FF, of=o.of||n;
-  const states=m.map((x,i)=>x||(ks[i]>=todayKey?"u":"n"));
-  const pr=m.filter(x=>x==="p").length, ab=m.filter(x=>x==="a").length, left=m.filter(x=>!x).length, done=pr>=of||!m.some(x=>!x)||ks[n-1]<todayKey;
-  try{await Promise.all([document.fonts.load('400 28px "IBM Plex Sans"'),document.fonts.load('600 30px "IBM Plex Sans"')]);}catch(e){}
-  const lg=await new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=CARD_LOGO;});
-  const W=1080,PAD=64,rowH=84,rowsPerCol=Math.ceil(n/2), cv=document.createElement("canvas"), ctx=cv.getContext("2d");
-  const H=1200+rowsPerCol*rowH, SC=2; cv.width=W*SC; cv.height=H*SC; ctx.scale(SC,SC); ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high";
-  ctx.fillStyle="#fff"; ctx.fillRect(0,0,W,H);
-  if(lg){ const ww=W*.8, hh=ww*lg.height/lg.width; ctx.globalAlpha=.06; ctx.drawImage(lg,(W-ww)/2,(H-hh)/2-80,ww,hh); ctx.globalAlpha=1; }
-  let y=PAD; ctx.textBaseline="alphabetic";
-  ctx.font="italic 600 60px "+FF; const t1="TRAINING CARD", tw=ctx.measureText(t1).width;
-  ctx.fillStyle=C.chip; ctx.fillRect(PAD,y,tw+64,96); ctx.fillStyle="#fff"; ctx.fillText(t1,PAD+32,y+68);
-  if(lg){ const lw=250, lh=lw*lg.height/lg.width; ctx.drawImage(lg,W-PAD-lw,y+48-lh/2,lw,lh); }
-  y+=96+44;
-  ctx.fillStyle=C.ink; ctx.font="600 40px "+FF; ctx.fillText(o.name,PAD,y+30);
-  ctx.fillStyle=C.chip; ctx.font="italic 600 34px "+FF; ctx.textAlign="right"; ctx.fillText(o.label,W-PAD,y+30); ctx.textAlign="left"; y+=54;
-  ctx.fillStyle=C.muted; ctx.font="400 28px "+FF; ctx.fillText(o.range,PAD,y+22); y+=48;
-  const rope=yy2=>{ ctx.strokeStyle=C.deep; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(PAD,yy2); ctx.lineTo(W-PAD,yy2); ctx.stroke(); let i=0; for(let x=PAD+8;x<=W-PAD-8;x+=28,i++){ ctx.fillStyle=i%5===0?C.deep:C.chip; ctx.beginPath(); ctx.arc(x,yy2,8,0,7); ctx.fill(); } };
-  rope(y); y+=44;
-  const colW=(W-2*PAD-40)/2;
-  const chip=(x,y2,w,txt,fg,bg,bd)=>{ ctx.fillStyle=bg; ctx.fillRect(x,y2,w,50); ctx.strokeStyle=bd; ctx.lineWidth=2; ctx.strokeRect(x,y2,w,50); ctx.fillStyle=fg; let fs=24; ctx.font="600 "+fs+"px "+FF; while(fs>14&&ctx.measureText(txt).width>w-14){fs--;ctx.font="600 "+fs+"px "+FF;} ctx.textAlign="center"; ctx.fillText(txt,x+w/2,y2+34); ctx.textAlign="left"; };
-  ks.forEach((k,i)=>{ const col=i<rowsPerCol?0:1, r=i%rowsPerCol, x=PAD+col*(colW+40), y2=y+r*rowH, st=states[i];
-    ctx.strokeStyle=C.line; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(x,y2+rowH-6); ctx.lineTo(x+colW,y2+rowH-6); ctx.stroke();
-    ctx.fillStyle="rgba(11,87,112,.35)"; ctx.font="italic 600 34px "+FF; ctx.fillText(pad(i+1),x,y2+46);
-    ctx.fillStyle=C.ink; ctx.font="600 30px "+FF; ctx.fillText(wd(k),x+64,y2+46);
-    ctx.fillStyle=C.chip; ctx.font="600 30px "+FF; ctx.fillText(ddmm(k),x+170,y2+46);
-    const cx=x+colW-130;
-    if(st==="p") chip(cx,y2+12,130,"✓ Present",C.ok,C.oktint,C.ok);
-    else if(st==="a") chip(cx,y2+12,130,"✕ Absent",C.bad,C.badtint,C.bad);
-    else if(st==="u") chip(cx,y2+12,130,"Upcoming",C.muted,"#fff",C.line);
-    else chip(cx,y2+12,130,"Not marked",C.muted,"#fff",C.line);
-  });
-  y+=rowsPerCol*rowH+24; rope(y); y+=40;
-  ctx.fillStyle=C.chip; ctx.fillRect(PAD,y,W-2*PAD,110); ctx.fillStyle="#fff"; ctx.font="600 32px "+FF; ctx.fillText(done?o.doneText:"IN PROGRESS",PAD+36,y+66);
-  ctx.font="italic 600 52px "+FF; ctx.textAlign="right"; ctx.fillText(pr+" of "+of,W-PAD-36,y+72); ctx.textAlign="left"; y+=110;
-  ctx.fillStyle=C.line; ctx.fillRect(PAD,y,W-2*PAD,14); ctx.fillStyle=C.ok; ctx.fillRect(PAD,y,(W-2*PAD)*Math.min(1,pr/of),14); y+=14+36;
-  const bw=(W-2*PAD-2*20)/3;
-  const stats=[["ATTENDED",String(pr),C.ok],["REMAINING",String(left),left?C.chip:C.muted],["ABSENT",String(ab),ab?C.bad:C.muted]];
-  stats.forEach((st,i)=>{ const x=PAD+i*(bw+20); ctx.strokeStyle=C.line; ctx.lineWidth=2; ctx.strokeRect(x,y,bw,128);
-    ctx.fillStyle=C.muted; ctx.font="600 21px "+FF; ctx.textAlign="center"; ctx.fillText(st[0],x+bw/2,y+40);
-    ctx.fillStyle=st[2]; ctx.font="italic 600 60px "+FF; ctx.fillText(st[1],x+bw/2,y+102); ctx.textAlign="left"; });
-  y+=128+PAD;
-  const o2=document.createElement("canvas"); o2.width=W*SC; o2.height=Math.ceil(y*SC); o2.getContext("2d").drawImage(cv,0,0);
-  return await new Promise((res,rej)=>o2.toBlob(b=>b?res(b):rej(new Error("png")),"image/png"));
+  const m=o.m, ks=o.ks, of=o.of||m.length;
+  const rows=m.map((x,i)=>({wd:wd(ks[i]),date:ddmm(ks[i]),st:x||(ks[i]>=todayKey?"u":"n"),tag:o.of&&i>=o.of?"MAKE-UP":""}));
+  const pr=m.filter(x=>x==="p").length, ab=m.filter(x=>x==="a").length;
+  return glassCard({name:o.name,label:o.label,range:o.range,rows,of,pr,ab,left:o.of?Math.max(0,of-pr):m.filter(x=>!x).length,done:pr>=of||!m.some(x=>!x)||ks[ks.length-1]<todayKey,doneText:o.doneText});
 }
 async function teamShareCard(s,btn,blobFn){
   const old=btn.textContent; btn.disabled=true; btn.textContent="Preparing…";
