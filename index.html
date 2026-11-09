@@ -233,6 +233,24 @@ select,input{background:var(--glass2);border-color:var(--glassbd)}
 .fc.p .fw,.fc.a .fw{color:inherit}
 .fc.p .fd,.fc.a .fd{color:inherit}
 .flist .empty{background:var(--glass);border:1px solid var(--glassbd);border-radius:18px;padding:16px}
+/* teams: thin one-line boxes (glass) */
+#p-team .fbx,#p-fit .fbx{display:flex;flex-wrap:wrap;gap:4px}
+#p-team .fc,#p-fit .fc{min-height:0;height:28px;padding:0 5px;border-radius:8px;flex-direction:row;gap:3px}
+#p-team .fc .fw,#p-fit .fc .fw{font-size:11px}
+#p-team .fc .fd,#p-fit .fc .fd{font-size:13px;gap:2px}
+/* stronger green when present */
+:root{--okfill:#2EAA6E;--okchip:#BFEBD4}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--okfill:#2E9E68;--okchip:rgba(46,170,110,.45)}}
+:root[data-theme="dark"]{--okfill:#2E9E68;--okchip:rgba(46,170,110,.45)}
+.fc.p{background:var(--okchip);border:1.5px solid var(--ok);color:var(--ok)}
+.dlist .day.s-p{border-left-color:var(--okfill)}
+/* privates: Present and Absent as two separate buttons */
+.dlist .tog,.dlist .day .tog{gap:8px;border:0;background:transparent;overflow:visible;border-radius:14px}
+.dlist .tog button,.dlist .tog button+button{border:1px solid var(--glassbd);border-radius:12px;background:var(--glass2);padding:9px 14px}
+.dlist .tog .p[aria-pressed="true"]{background:var(--okfill);border-color:var(--okfill);color:#fff}
+.dlist .tog .a[aria-pressed="true"]{background:var(--badtint);border-color:var(--bad);color:var(--bad)}
+.dlist .day.miss .tog{background:transparent}
+.dlist .day.miss .tog button{background:var(--goldtint)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
