@@ -1,6 +1,9 @@
 <!doctype html>
 <html lang="en">
 <head>
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js" crossorigin>
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js" crossorigin>
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js" crossorigin>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -353,6 +356,9 @@ select,input{background:var(--glass2);border-color:var(--glassbd)}
   </div>
 </div>
 
+<script>
+try{ if(localStorage.getItem("fbIn_team")==="1"){ document.getElementById("booting").hidden=true; document.getElementById("app").hidden=false; document.getElementById("outBtn").hidden=false; } }catch(e){}
+</script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -1195,13 +1201,16 @@ let STARTED=false;
 onAuthStateChanged(auth,user=>{
   $("booting").hidden=true;
   if(user){
+    try{localStorage.setItem("fbIn_team","1");}catch(e){}
     $("login").hidden=true; $("app").hidden=false; $("outBtn").hidden=false;
     if(!STARTED){STARTED=true; db=FS; startData();}
   }else{
+    try{localStorage.removeItem("fbIn_team");}catch(e){}
     if(STARTED){location.reload();return;}
     $("app").hidden=true; $("outBtn").hidden=true; $("login").hidden=false;
   }
 });
+setTimeout(()=>{ const b=$("booting"); if(b&&!b.hidden){ b.innerHTML='Connection is slow. <button class="btn" type="button" id="bootRetry">Try again</button>'; $("bootRetry").onclick=()=>location.reload(); } },7000);
 $("login").addEventListener("submit",async e=>{
   e.preventDefault();
   const er=$("lgErr"), btn=$("lgBtn"), em=$("lgEmail").value.trim(), pw=$("lgPass").value; er.hidden=true;
@@ -1223,5 +1232,8 @@ $("outBtn").onclick=()=>{
 };
 </script>
 
+<script>
+if("serviceWorker" in navigator) addEventListener("load",function(){ navigator.serviceWorker.register("sw.js").catch(function(){}); });
+</script>
 </body>
 </html>
