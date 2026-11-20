@@ -802,18 +802,35 @@ const fitSave=async(id,patch)=>{
   const old={...t}; Object.assign(t,patch); renderFit();
   if(db){ try{ await db.doc("fit/"+id).set(Object.fromEntries(Object.entries(t).filter(([k])=>k!=="id"))); }catch(x){ Object.keys(t).forEach(k=>delete t[k]); Object.assign(t,old); renderFit(); fail("Not saved. Check your internet and try again."); } }
 };
+/* the dates of the boxes, skipping frozen Tuesdays; stops where an open freeze starts */
+function fitKeys(t,n){ const out=[]; if(!t.start) return out; let k=t.start, g=0;
+  while(out.length<n&&g++<300){
+    if(isFrz(t,k)){ if(t.freeze&&k>=t.freeze) break; k=addDays(k,7); continue; }
+    out.push(k); k=addDays(k,7); }
+  return out; }
+async function fitFreeze(t){
+  const m=fitMarks(t), keep=fitKeys({...t,freeze:todayKey},m.length).length;
+  const lost=m.slice(keep).filter(Boolean).length;
+  FITRENEW=null; await fitSave(t.id,{freeze:todayKey, marks:m.slice(0,keep)});
+  if(lost) fail(`${lost} mark${lost>1?"s":""} from today onwards were cleared by the freeze.`);
+}
+async function fitResume(t){
+  const to=addDays(todayKey,-1), list=(t.frozen||[]).slice();
+  if(to>=t.freeze) list.push({from:t.freeze,to});
+  FITRENEW=null; await fitSave(t.id,{freeze:null, frozen:list});
+}
 function fitMarks(t){ const n=Math.max(1,+t.n||4), src=t.marks||[], m=[]; let ok=0,i=0; while(ok<n&&i<200){ const v=src[i]||""; m.push(v); if(v!=="a") ok++; i++; } return m; }
 function fitLine(no,x,cur,idx){
   const n=x.marks?x.marks.length:(+x.n||4), p=x.marks?x.marks.filter(v=>v==="p").length:(+x.p||0), a=x.marks?x.marks.filter(v=>v==="a").length:(+x.a||0);
   const yy=k=>ddmm(k)+"/"+String(parse(k).getFullYear()).slice(2);
-  const range=x.start?`${yy(x.start)} → ${yy(addDays(x.start,7*(n-1)))}`:"No date";
+  const range=x.start?`${yy(x.start)} → ${yy(x.end||addDays(x.start,7*(n-1)))}`:"No date";
   const del=cur?"":`<button type="button" class="x fh-del" data-hi="${idx}">Delete</button>`;
   return `<div class="fh${cur?" cur":""}"><b>#${no}</b><span>${range}</span><span class="fhs">✓ ${p} · ✗ ${a}${cur?" · now":""}</span>${del}</div>`;
 }
 function fitHistSorted(t){ return (t.hist||[]).map((x,i)=>({...x,_i:i})).sort((a,b)=>(a.start||"").localeCompare(b.start||"")); }
 function fitHist(t){
   const h=fitHistSorted(t), unrec=Math.max(0,(+t.renewals||0)-h.length), cur=h.length+unrec+1;
-  let out=`<p class="note" style="margin:4px 0 0">Subscriptions</p>`+fitLine(cur,{start:t.start,marks:fitMarks(t)},true);
+  let out=`<p class="note" style="margin:4px 0 0">Subscriptions</p>`+fitLine(cur,{start:t.start,marks:fitMarks(t),end:(k=>k[k.length-1])(fitKeys(t,fitMarks(t).length))},true);
   h.slice().reverse().forEach((x,k)=>{ out+=fitLine(unrec+h.length-k,x,false,x._i); });
   if(unrec) out+=`<p class="note" style="margin:0">${unrec} older renewal${unrec>1?"s":""} without details.</p>`;
   out+= FITOLD===t.id ? `<div class="fold">
@@ -838,14 +855,23 @@ function renderFit(){
   let soon=0;
   if(!rows.length){ list.innerHTML=`<p class="empty">No trainees yet. Open “Edit trainees” below and add the first name.</p>`; }
   else list.innerHTML=rows.map((t,ix)=>{
-    const m=fitMarks(t), nn=Math.max(1,+t.n||4), filled=m.filter(Boolean).length, pres=m.filter(x=>x==="p").length, full=filled===m.length, isSoon=(m.length-filled)<=1;
+    const m=fitMarks(t), nn=Math.max(1,+t.n||4), filled=m.filter(Boolean).length, pres=m.filter(x=>x==="p").length;
+    const full=!t.freeze&&filled===m.length, isSoon=!t.freeze&&(m.length-filled)<=1;
+    const fk=fitKeys(t,m.length);
     if(isSoon) soon++;
-    const boxes=m.map((x,i)=>{ const k=t.start?addDays(t.start,7*i):null, td=k===todayKey, ms=!x&&k&&k<todayKey;
-      return `<button type="button" class="fc ${x}${td?" today":""}${ms?" miss":""}" data-id="${t.id}" data-i="${i}" aria-label="Session ${i+1}">${k?`<span class="fw">${SHORT[parse(k).getDay()]}</span>`:""}<span class="fd">${k?ddmm(k):"#"+(i+1)} <span class="fm">${x==="p"?"✓":x==="a"?"✗":""}</span>${ms?`<span class="fx">!</span>`:""}</span></button>`; }).join("");
-    const end=full?`<button type="button" class="frn" data-renew="${t.id}">Renew</button>`:`<span class="fct">${pres}/${nn}</span>`;
-    const nextTue=t.start?addDays(t.start,7*m.length):lastTue();
+    const boxes=m.map((x,i)=>{ const k=fk[i]||null, fz=!k&&!!t.freeze, td=k===todayKey, ms=!x&&k&&k<todayKey;
+      return `<button type="button" class="fc ${x}${td?" today":""}${ms?" miss":""}${fz?" frz":""}" data-id="${t.id}" data-i="${i}" aria-label="Session ${i+1}">${k?`<span class="fw">${SHORT[parse(k).getDay()]}</span>`:(fz?`<span class="fw">Tue</span>`:"")}<span class="fd">${k?ddmm(k):(fz?"❄":"#"+(i+1))} <span class="fm">${x==="p"?"✓":x==="a"?"✗":""}</span>${ms?`<span class="fx">!</span>`:""}</span></button>`; }).join("");
+    const end=t.freeze?frzBadge:(full?`<button type="button" class="frn" data-renew="${t.id}">Renew</button>`:`<span class="fct">${pres}/${nn}</span>`);
+    const nextTue=(k=>k[m.length])(fitKeys(t,m.length+1))||(t.start?addDays(t.start,7*m.length):lastTue());
+    const fhold=!t.start?"":(t.freeze
+      ? `<div class="row" style="align-items:center;margin-top:2px">
+           <button type="button" class="btn f-resume" style="flex:0 0 auto">Resume</button>
+           <span class="note" style="margin:0">${frzNote(t)} The weeks away are not counted.</span></div>`
+      : `<div class="row" style="align-items:center;margin-top:2px">
+           <button type="button" class="btn alt f-freeze" style="flex:0 0 auto">❄ Freeze</button>
+           <span class="note" style="margin:0">Travelling? Freeze now and resume when back. Frozen weeks are not counted.</span></div>`);
     const rnw=FITRENEW===t.id?`<div class="fed">${t.start?`<button type="button" class="btn sh-go" style="align-self:flex-start">Share card</button>`:`<p class="note">Set a start Tuesday in Edit to share a card.</p>`}<div class="row" style="align-items:end"><label>Renew from<select class="fr-date">${tueOptions(nextTue)}</select></label>
-        <button type="button" class="btn fr-go" style="flex:0 0 auto">Renew</button><button type="button" class="x fr-no" style="flex:0 0 auto">Close</button></div>${fitHist(t)}</div>`:"";
+        <button type="button" class="btn fr-go" style="flex:0 0 auto">Renew</button><button type="button" class="x fr-no" style="flex:0 0 auto">Close</button></div>${fhold}${fitHist(t)}</div>`:"";
     const ed=FITOPEN===t.id?`<div class="fed">
         <div class="row"><label style="flex:0 1 80px">Position<input class="fe-pos" type="number" inputmode="numeric" min="1" max="${rows.length}" value="${ix+1}"></label><label>Name<input class="fe-name" maxlength="40" autocomplete="off"></label>
         <label style="flex:0 1 90px">Sessions<input class="fe-n" type="number" inputmode="numeric" min="1" max="30" value="${nn}"></label>
@@ -856,7 +882,7 @@ function renderFit(){
           ${t.prev?`<button type="button" class="x fe-undo" style="flex:0 0 auto">Undo renew</button>`:""}
           <button type="button" class="x fe-del" style="flex:0 0 auto">Delete trainee</button>
         </div></div>`:"";
-    return `<div class="fr${isSoon?" soon":""}" data-row="${t.id}"><div class="fn"><span class="fno">${ix+1}</span><button type="button" class="fnm" data-rn="${t.id}"></button>${+t.renewals?`<small>×${+t.renewals}</small>`:""}<button type="button" class="x ed" data-edit="${t.id}">${FITOPEN===t.id?"Close":"Edit"}</button></div>${end}<div class="fbx">${boxes}</div>${rnw}${ed}</div>`;
+    return `<div class="fr${t.freeze?" held":isSoon?" soon":""}" data-row="${t.id}"><div class="fn"><span class="fno">${ix+1}</span><button type="button" class="fnm" data-rn="${t.id}"></button>${+t.renewals?`<small>×${+t.renewals}</small>`:""}<button type="button" class="x ed" data-edit="${t.id}">${FITOPEN===t.id?"Close":"Edit"}</button></div>${end}<div class="fbx">${boxes}</div>${rnw}${ed}</div>`;
   }).join("");
   list.querySelectorAll(".fr").forEach(r=>{ const t=FIT.find(x=>x.id===r.dataset.row); r.querySelector(".fnm").textContent=t.name; const ni=r.querySelector(".fe-name"); if(ni) ni.value=t.name; });
   const byDay={}, fmiss={};
@@ -881,6 +907,8 @@ $("fitList").addEventListener("click",async e=>{
   if(ed){ FITOPEN=FITOPEN===ed.dataset.edit?null:ed.dataset.edit; FITRENEW=null; renderFit(); return; }
   const row=e.target.closest(".fr"); if(!row) return; const t=FIT.find(x=>x.id===row.dataset.row);
   if(e.target.closest(".fr-no")){ FITRENEW=null; FITOLD=null; renderFit(); return; }
+  if(e.target.closest(".f-freeze")){ fitFreeze(t); return; }
+  if(e.target.closest(".f-resume")){ fitResume(t); return; }
   if(e.target.closest(".fo-open")){ FITOLD=t.id; renderFit(); return; }
   if(e.target.closest(".fo-no")){ FITOLD=null; renderFit(); return; }
   if(e.target.closest(".fo-save")){
@@ -934,14 +962,36 @@ renderFit();
 const yy=k=>ddmm(k)+"/"+String(parse(k).getFullYear()).slice(2);
 const wd=k=>SHORT[parse(k).getDay()];
 let TCUR="safwa", SW=[], TOPEN=null, TEDIT=null, TOLD=null;
+(function(){ const st=document.createElement("style"); st.textContent=
+  `.fct.frz{background:var(--tint);color:var(--blue);font-weight:700;border-radius:8px;padding:2px 8px}
+   .fc.frz{opacity:.45;border-style:dashed}
+   .fr.held{background:var(--tint)}`;
+  document.head.appendChild(st); })();
+
+/* FREEZE — hold a card while someone travels.
+   x.freeze = the day it was frozen (open-ended), x.frozen = [{from,to}] past holds. */
+const frzList=x=>{ const out=(x.frozen||[]).slice(); if(x.freeze) out.push({from:x.freeze,to:null}); return out; };
+const isFrz=(x,k)=>frzList(x).some(f=>k>=f.from&&(!f.to||k<=f.to));
+function frzDays(x){ let n=0;
+  frzList(x).forEach(f=>{ const to=f.to||todayKey; if(to>=f.from) n+=Math.round((parse(to)-parse(f.from))/864e5)+1; });
+  return n; }
+const frzNote=x=>`Frozen since ${wd(x.freeze)} ${ddmm(x.freeze)} · ${frzDays(x)} day${frzDays(x)===1?"":"s"} so far.`;
+const frzBadge=`<span class="fct frz">❄ Frozen</span>`;
 
 function nextTrain(team,k){ const d=TM(team).days; for(let i=0;i<14;i++){ const kk=addDays(k,i); if(d.includes(parse(kk).getDay())) return kk; } return k; }
 function sessKeys(team,start,n){ const out=[]; let k=nextTrain(team,start); while(out.length<n){ out.push(k); k=nextTrain(team,addDays(k,1)); } return out; }
 /* one-month card: from the start date to the same date next month, that end day included */
 function monthEnd(start){ const d=parse(start), y=d.getFullYear(), m=d.getMonth()+1, last=new Date(y,m+1,0).getDate(); return keyOf(new Date(y,m,Math.min(d.getDate(),last))); }
-function monthKeys(team,start){ const end=monthEnd(start), out=[]; let k=nextTrain(team,start); while(k<=end){ out.push(k); k=nextTrain(team,addDays(k,1)); } return out; }
+/* the card end moves out by however many days were frozen */
+function teamEnd(s){ return addDays(monthEnd(s.start), frzDays(s)); }
+function monthKeys(team,start,s){ const end=s?teamEnd(s):monthEnd(start), out=[]; let k=nextTrain(team,start);
+  while(k<=end&&out.length<400){ if(!s||!isFrz(s,k)) out.push(k); k=nextTrain(team,addDays(k,1)); } return out; }
 /* never drop a marked box: if older data has marks past the month, keep showing them */
-function teamKeys(s){ const base=monthKeys(s.team,s.start), src=s.marks||[]; let last=0; src.forEach((x,i)=>{ if(x) last=i+1; }); return last>base.length?sessKeys(s.team,s.start,last):base; }
+function teamKeys(s){ const base=monthKeys(s.team,s.start,s), src=s.marks||[]; let last=0; src.forEach((x,i)=>{ if(x) last=i+1; });
+  if(last<=base.length) return base;
+  const out=[]; let k=nextTrain(s.team,s.start);
+  while(out.length<last&&out.length<400){ if(!isFrz(s,k)) out.push(k); k=nextTrain(s.team,addDays(k,1)); }
+  return out; }
 const nOf=s=>teamKeys(s).length;
 function marksOf(s){ const n=nOf(s), m=(s.marks||[]).slice(0,n); while(m.length<n) m.push(""); return m; }
 function dayOpts(team,sel,back=60,fwd=30){ const out=[]; let k=nextTrain(team,addDays(todayKey,-back)); const end=addDays(todayKey,fwd); while(k<=end){ out.push(k); k=nextTrain(team,addDays(k,1)); } if(sel&&!out.includes(sel)) out.push(sel); out.sort();
@@ -967,18 +1017,30 @@ async function delSw(id){
 function renderTabs(){
   TEAMS.forEach(t=>{ const b=document.querySelector(`.tabs button[data-tab="${t.id}"]`); if(b) b.classList.toggle("due",SW.some(s=>s.team===t.id&&(isSoon(s)||teamEnded(s)))); });
 }
-function teamEnded(s){ const ks=teamKeys(s); return (ks.length?ks[ks.length-1]:monthEnd(s.start))<todayKey; }
-function isSoon(s){ return teamKeys(s).filter(k=>k>=todayKey).length<=1; }
+function teamEnded(s){ if(s.freeze) return false; const ks=teamKeys(s); return (ks.length?ks[ks.length-1]:teamEnd(s))<todayKey; }
+function isSoon(s){ if(s.freeze) return false; return teamKeys(s).filter(k=>k>=todayKey).length<=1; }
+
+async function teamFreeze(s){
+  const ks=teamKeys(s), cut=ks.filter(k=>k<todayKey).length, m=marksOf(s);
+  const lost=m.slice(cut).filter(Boolean).length;
+  TOPEN=null; await teamSave(s.id,{freeze:todayKey, marks:m.slice(0,cut)});
+  if(lost) fail(`${lost} mark${lost>1?"s":""} from today onwards were cleared by the freeze.`);
+}
+async function teamResume(s){
+  const to=addDays(todayKey,-1), list=(s.frozen||[]).slice();
+  if(to>=s.freeze) list.push({from:s.freeze,to});
+  TOPEN=null; await teamSave(s.id,{freeze:null, frozen:list});
+}
 function teamLine(no,team,x,cur,idx){
   const n=x.marks?x.marks.length:(+x.n||TM(team).n), p=x.marks?x.marks.filter(v=>v==="p").length:(+x.p||0), a=x.marks?x.marks.filter(v=>v==="a").length:(+x.a||0);
-  const range=x.start?`${yy(x.start)} → ${yy(monthEnd(x.start))}`:"No date";
+  const range=x.start?`${yy(x.start)} → ${yy(x.end||monthEnd(x.start))}`:"No date";
   const del=cur?"":`<button type="button" class="x fh-del" data-hi="${idx}">Delete</button>`;
   return `<div class="fh${cur?" cur":""}"><b>#${no}</b><span>${range}</span><span class="fhs">✓ ${p} · ✗ ${a}${cur?" · now":""}</span>${del}</div>`;
 }
 function histHtml(s){
   const h=(s.hist||[]).map((x,i)=>({...x,_i:i})).sort((a,b)=>(a.start||"").localeCompare(b.start||""));
   const unrec=Math.max(0,(+s.renewals||0)-h.length), cur=h.length+unrec+1;
-  let out=`<p class="note" style="margin:4px 0 0">Subscriptions</p>`+teamLine(cur,s.team,{start:s.start,marks:marksOf(s)},true);
+  let out=`<p class="note" style="margin:4px 0 0">Subscriptions</p>`+teamLine(cur,s.team,{start:s.start,marks:marksOf(s),end:teamEnd(s)},true);
   h.slice().reverse().forEach((x,k)=>{ out+=teamLine(unrec+h.length-k,s.team,x,false,x._i); });
   if(unrec) out+=`<p class="note" style="margin:0">${unrec} older renewal${unrec>1?"s":""} without details.</p>`;
   out+= TOLD===s.id ? `<div class="fold">
@@ -999,12 +1061,19 @@ function renderTeam(){
     const ended=teamEnded(s), full=filled===n||ended, sn=isSoon(s)||ended; if(sn) soon++;
     const boxes=m.map((x,i)=>{ const td=ks[i]===todayKey, ms=!x&&ks[i]<todayKey; if(ms) tmiss[ks[i]]=(tmiss[ks[i]]||0)+1;
       return `<button type="button" class="fc ${x}${td?" today":""}${ms?" miss":""}" data-id="${s.id}" data-i="${i}" aria-label="${wd(ks[i])} ${ddmm(ks[i])}"><span class="fw">${wd(ks[i])}</span><span class="fd">${ddmm(ks[i])}${x?` <span class="fm">${x==="p"?"✓":"✗"}</span>`:""}${ms?` <span class="fx">!</span>`:""}</span></button>`; }).join("");
-    const end=full?`<button type="button" class="frn" data-rn="${s.id}">Renew</button>`:`<span class="fct">${pres}/${n}</span>`;
-    const nextK=nextTrain(s.team,addDays(monthEnd(s.start),1));
+    const end=s.freeze?frzBadge:(full?`<button type="button" class="frn" data-rn="${s.id}">Renew</button>`:`<span class="fct">${pres}/${n}</span>`);
+    const nextK=nextTrain(s.team,addDays(teamEnd(s),1));
+    const hold=s.freeze
+      ? `<div class="row" style="align-items:center;margin-top:2px">
+           <button type="button" class="btn t-resume" style="flex:0 0 auto">Resume</button>
+           <span class="note" style="margin:0">${frzNote(s)} Card now ends ${ddmm(teamEnd(s))} instead of ${ddmm(monthEnd(s.start))}.</span></div>`
+      : `<div class="row" style="align-items:center;margin-top:2px">
+           <button type="button" class="btn alt t-freeze" style="flex:0 0 auto">❄ Freeze</button>
+           <span class="note" style="margin:0">Travelling? Freeze now and resume when back. Frozen days are not counted and the card end moves out.</span></div>`;
     const op=TOPEN===s.id?`<div class="fed">
         <button type="button" class="btn sh-go" style="align-self:flex-start">Share card</button>
         <div class="row" style="align-items:end"><label>Renew from<select class="fr-date">${dayOpts(s.team,nextK)}</select></label>
-        <button type="button" class="btn alt fr-go" style="flex:0 0 auto">Renew</button><button type="button" class="x fr-no" style="flex:0 0 auto">Close</button></div>${histHtml(s)}</div>`:"";
+        <button type="button" class="btn alt fr-go" style="flex:0 0 auto">Renew</button><button type="button" class="x fr-no" style="flex:0 0 auto">Close</button></div>${hold}${histHtml(s)}</div>`:"";
     const ed=TEDIT===s.id?`<div class="fed">
         <div class="row"><label style="flex:0 1 80px">Position<input class="fe-pos" type="number" inputmode="numeric" min="1" max="${rows.length}" value="${ix+1}"></label><label>Name<input class="fe-name" maxlength="40" autocomplete="off"></label></div>
         <div class="row"><label style="flex:0 1 90px">Renewals<input class="fe-r" type="number" inputmode="numeric" min="0" value="${+s.renewals||0}"></label>
@@ -1014,7 +1083,7 @@ function renderTeam(){
           ${s.prev?`<button type="button" class="x fe-undo" style="flex:0 0 auto">Undo renew</button>`:""}
           <button type="button" class="x fe-del" style="flex:0 0 auto">Delete swimmer</button>
         </div></div>`:"";
-    return `<div class="fr${sn?" soon":""}" data-row="${s.id}"><div class="fn"><span class="fno">${ix+1}</span><button type="button" class="fnm" data-rn="${s.id}"></button>${+s.renewals?`<small>×${+s.renewals}</small>`:""}<button type="button" class="x ed" data-edit="${s.id}">${TEDIT===s.id?"Close":"Edit"}</button></div>${end}<div class="fbx">${boxes}</div>${op}${ed}</div>`;
+    return `<div class="fr${s.freeze?" held":sn?" soon":""}" data-row="${s.id}"><div class="fn"><span class="fno">${ix+1}</span><button type="button" class="fnm" data-rn="${s.id}"></button>${+s.renewals?`<small>×${+s.renewals}</small>`:""}<button type="button" class="x ed" data-edit="${s.id}">${TEDIT===s.id?"Close":"Edit"}</button></div>${end}<div class="fbx">${boxes}</div>${op}${ed}</div>`;
   }).join("");
   $("tList").querySelectorAll(".fr").forEach(r=>{ const s=SW.find(x=>x.id===r.dataset.row); r.querySelector(".fnm").textContent=s.name; const ni=r.querySelector(".fe-name"); if(ni) ni.value=s.name; });
   const byDay={};
@@ -1044,6 +1113,8 @@ $("tList").addEventListener("click",async e=>{
   const row=e.target.closest(".fr"); if(!row) return; const s=SW.find(x=>x.id===row.dataset.row);
   if(e.target.closest(".sh-go")){ teamShareCard(s,e.target.closest(".sh-go")); return; }
   if(e.target.closest(".fr-no")){ TOPEN=null; TOLD=null; renderTeam(); return; }
+  if(e.target.closest(".t-freeze")){ teamFreeze(s); return; }
+  if(e.target.closest(".t-resume")){ teamResume(s); return; }
   if(e.target.closest(".fo-open")){ TOLD=s.id; renderTeam(); return; }
   if(e.target.closest(".fo-no")){ TOLD=null; renderTeam(); return; }
   if(e.target.closest(".fo-save")){
