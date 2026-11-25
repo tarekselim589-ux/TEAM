@@ -34,21 +34,18 @@ self.addEventListener("fetch", e => {
   if (req.method !== "GET") return;
   if (LIVE.test(req.url)) return;
 
-  // صفحة التطبيق: لو النت رد في 1.2 ثانية ياخد آخر نسخة، وإلا يفتح من الكاش على طول
+  // صفحة التطبيق: يفتح من الكاش على طول، ويجيب آخر نسخة من النت في الخلفية (تظهر المرة الجاية)
   if (req.mode === "navigate") {
     e.respondWith((async () => {
       const cache = await caches.open(V);
       const cached = await cache.match("./index.html");
-      const net = fetch(req).then(r => {
-        if (r && r.ok) cache.put("./index.html", r.clone()).catch(() => {});
+      const net = fetch(req.url, { cache: "no-cache" }).then(r => {
+        if (r && r.ok && !r.redirected) cache.put("./index.html", r.clone()).catch(() => {});
         return r;
       });
-      if (!cached) return net;
       e.waitUntil(net.catch(() => {}));
-      return Promise.race([
-        net.catch(() => cached),
-        new Promise(res => setTimeout(() => res(cached), 1200))
-      ]);
+      if (!cached) return fetch(req);
+      return cached;
     })());
     return;
   }
