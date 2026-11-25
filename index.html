@@ -54,13 +54,6 @@ label{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--mu
 select,input{font:15px var(--body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:8px 10px;width:100%}
 .btn{font:600 15px var(--body);background:var(--blue);color:var(--card);border:0;border-radius:9px;padding:9px 16px;cursor:pointer}
 .err{color:var(--bad);font-size:13px;margin:0}
-.list{display:flex;flex-direction:column}
-.item{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
-.item:first-child,.mh + .item{border-top:0}
-.mh{font-family:var(--display);font-size:21px;margin:16px 0 2px;color:var(--ink)}
-.mh:first-child{margin-top:0}
-.item .s{font-weight:600;overflow-wrap:anywhere}
-.amt{font-family:var(--display);font-weight:700;font-size:19px;font-variant-numeric:tabular-nums;color:var(--gold)}
 .x{background:none;border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:3px 9px;font:13px var(--body);cursor:pointer}
 .x.arm{border-color:var(--bad);color:var(--bad);background:var(--badtint)}
 .empty{color:var(--muted);font-size:14px;text-align:center;padding:14px 0;margin:0}
@@ -93,16 +86,7 @@ summary.note{cursor:pointer}
 .rmx{background:none;border:0;color:var(--gold);font:600 13px var(--body);cursor:pointer;padding:0 4px}
 .rmx.arm{color:var(--bad)}
 .dname{line-height:1.3}
-.lock{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding-block:26px;color:var(--ink)}
-.lock svg{color:var(--blue)}
 .lt{margin:0;font-weight:600;font-size:15px}
-.pin{width:150px;text-align:center;font:700 26px var(--display);letter-spacing:.5em;padding:8px 0 8px .5em}
-.mt{display:flex;justify-content:space-between;align-items:center;margin:4px 0 2px;padding:7px 12px;border-radius:9px;background:var(--goldtint);font-size:13.5px;font-weight:600}
-.mt b{font-family:var(--display);font-size:18px;color:var(--gold);font-variant-numeric:tabular-nums}
-.src{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:10px 14px}
-.src div{display:flex;flex-direction:column;gap:1px}
-.src span{font-size:12.5px;color:var(--muted);font-weight:500}
-.src b{font-family:var(--display);font-size:20px;color:var(--ink);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .tabs button.due::after{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--warn);margin-inline-start:7px;vertical-align:middle}
 .soon{color:var(--warn);font-weight:700}
 .hrow{display:block;width:100%;text-align:start;font:inherit;color:var(--ink);background:none;border:0;padding:9px 4px 4px;cursor:pointer;border-radius:0}
@@ -125,21 +109,12 @@ summary.note{cursor:pointer}
 summary.x{display:inline-block;list-style:none}
 summary.x::-webkit-details-marker{display:none}
 .pvEd[open] summary.x{border-color:var(--blue);color:var(--blue)}
-.total.all{background:var(--card);border:1px solid var(--line)}
-.allv{display:flex;align-items:center;gap:10px}
-.total.all b{color:var(--ink)}
-.eye{background:none;border:1px solid var(--line);border-radius:8px;color:var(--blue);padding:4px 6px;cursor:pointer;display:flex}
-.eye[aria-pressed="true"] .slash{display:none}
 .bk{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 #app{width:100%;max-width:none;margin:0}
 .top{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .login{display:flex;flex-direction:column;gap:12px;max-width:380px;width:100%;margin:24px auto 0}
 .login .btn{margin-top:4px}
 .imp{display:inline-block;cursor:pointer}
-.mh{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.srcw{padding:10px 14px;display:flex;flex-direction:column;gap:6px}
-.srch{display:flex;align-items:center;justify-content:space-between;font-size:12.5px;color:var(--muted);font-weight:600}
-.srcw .src{padding:0}
 .fr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
 .fr:first-child{border-top:0}
 .fr .fn{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
@@ -163,7 +138,7 @@ summary.x::-webkit-details-marker{display:none}
 .fh b{font:700 15px var(--display);color:var(--muted)}
 .fh.cur b,.fh.cur span{color:var(--ink)}
 .fh .fhs{font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap}
-.fh .fh-del{font-size:11.5px;padding:1px 7px}
+.fh .fh-del,.fh .fz-del{font-size:11.5px;padding:1px 7px}
 .fold{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:8px}
 .fold .row>label{flex:1 1 70px}
 .fed{gap:6px}
@@ -273,6 +248,10 @@ select,input{background:var(--glass2);border-color:var(--glassbd)}
 
   <div id="app" class="wrap" hidden>
 
+  <details class="pvEd" id="dueWrap" hidden><summary class="x" id="dueSum">Renewals due</summary>
+    <div class="card" id="dueList" style="margin-top:8px;padding:6px 14px"></div>
+  </details>
+
   <nav class="tabs" role="tablist" id="tabs">
     <button role="tab" aria-selected="true" data-tab="safwa">Safwa</button>
     <button role="tab" aria-selected="false" data-tab="sharks">Sharks</button>
@@ -289,6 +268,9 @@ select,input{background:var(--glass2);border-color:var(--glassbd)}
     <div class="flist" id="tList"></div>
     <p class="note" id="tHow"></p>
     <div class="flast" id="tLast" hidden></div>
+    <details class="pvEd" id="tStatW"><summary class="x">Monthly stats</summary>
+      <div class="card" style="margin-top:8px;display:flex;flex-direction:column;gap:8px"><label>Month<select id="tStatM"></select></label><div id="tStat"></div></div>
+    </details>
     <details class="pvEd" id="tAddWrap"><summary class="x">Edit swimmers</summary>
       <div class="card" style="margin-top:8px;display:flex;flex-direction:column;gap:10px">
         <form class="row" id="tAddF" novalidate>
@@ -310,6 +292,9 @@ select,input{background:var(--glass2);border-color:var(--glassbd)}
     <div class="flist" id="fitList"></div>
     <p class="note">Tap any box to change it: empty → ✓ Present → ✗ Absent → empty. Each ✗ adds a make-up Tuesday at the end. Tap a name to renew it from a new Tuesday. Orange name = 1 session left or finished.</p>
     <div class="flast" id="fitLast" hidden></div>
+    <details class="pvEd" id="fitStatW"><summary class="x">Monthly stats</summary>
+      <div class="card" style="margin-top:8px;display:flex;flex-direction:column;gap:8px"><label>Month<select id="fitStatM"></select></label><div id="fitStat"></div></div>
+    </details>
     <details class="pvEd" id="fitEdWrap"><summary class="x">Edit trainees</summary>
       <div class="card" style="margin-top:8px;display:flex;flex-direction:column;gap:10px">
         <form class="row" id="fitAdd" novalidate>
@@ -388,12 +373,9 @@ const FS={
     for(let i=0;i<items.length;i+=400){const b=writeBatch(fs);items.slice(i,i+400).forEach(([p,d])=>b.set(fDoc(fs,p),d));await b.commit();}
   }
 };
-const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
 const DAYS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 const now=new Date(), CY=now.getFullYear(), CM=now.getMonth();
-const years=[]; for(let y=2022;y<=2030;y++) years.push(y);
 const $=id=>document.getElementById(id);
-const fmt=n=>Number(n||0).toLocaleString("en-US",{maximumFractionDigits:2});
 const pad=n=>String(n).padStart(2,"0");
 
 let db=null;
@@ -792,9 +774,36 @@ $("addForm").addEventListener("submit",async e=>{
   else{PRIV.push({id,...p});buildPrivates(PRIV);}
 });
 
+/* MONTHLY STATS (teams and Fitness) — present / absent / % per person in one month,
+   from the current card and old subscriptions that kept their boxes. Reads only, saves nothing. */
+let STATM={};
+const monthName=ym=>{ const [y,m]=ym.split("-").map(Number); return new Date(y,m-1,1).toLocaleString("en-US",{month:"long",year:"numeric"}); };
+function datedMarks(ks,m,out){ m.forEach((v,i)=>{ if(v&&ks[i]) out.push([ks[i],v]); }); return out; }
+function statHtml(key,selId,boxId,people){
+  const cur=keyOf(new Date(CY,CM,1)).slice(0,7), ms=new Set([cur]);
+  people.forEach(p=>p.dated.forEach(([k])=>ms.add(k.slice(0,7))));
+  const list=[...ms].sort().reverse(); if(!list.includes(STATM[key])) STATM[key]=cur; const ym=STATM[key];
+  const sel=$(selId); if(document.activeElement!==sel){ sel.innerHTML=list.map(x=>`<option value="${x}">${monthName(x)}</option>`).join(""); sel.value=ym; }
+  const pc=(p,a)=>Math.round(100*p/(p+a)); let tp=0,ta=0;
+  const rows=people.map(p=>{ let pr=0,ab=0; p.dated.forEach(([k,v])=>{ if(k.slice(0,7)===ym){ if(v==="p") pr++; else if(v==="a") ab++; } }); tp+=pr; ta+=ab; return {name:p.name,pr,ab}; }).filter(r=>r.pr+r.ab);
+  const box=$(boxId);
+  if(!rows.length){ box.innerHTML=`<p class="empty">No marks in ${monthName(ym)}.</p>`; return; }
+  box.innerHTML=`<div class="flast"><span>All</span><span class="ok">✓ <b>${tp}</b></span><span class="bad">✗ <b>${ta}</b></span><span><b>${pc(tp,ta)}%</b></span></div>`
+    +rows.map((r,i)=>`<div class="fh"><b>${i+1}</b><span class="snm"></span><span class="fhs">✓ ${r.pr} · ✗ ${r.ab}</span><span class="fhs" style="font-weight:700${pc(r.pr,r.ab)<75?";color:var(--bad)":""}">${pc(r.pr,r.ab)}%</span></div>`).join("");
+  box.querySelectorAll(".snm").forEach((el,i)=>el.textContent=rows[i].name);
+}
+function teamStats(rows){ statHtml("t","tStatM","tStat",rows.map(s=>{ const d=datedMarks(teamKeys(s),marksOf(s),[]);
+  (s.hist||[]).forEach(x=>{ if(x&&x.start&&Array.isArray(x.marks)&&x.marks.length) datedMarks(teamKeys({team:s.team,start:x.start,frozen:x.frozen||[],marks:x.marks}),x.marks,d); });
+  return {name:s.name,dated:d}; })); }
+function fitStats(rows){ statHtml("f","fitStatM","fitStat",rows.map(t=>{ const m=fitMarks(t), d=datedMarks(fitKeys(t,m.length),m,[]);
+  (t.hist||[]).forEach(x=>{ if(x&&x.start&&Array.isArray(x.marks)&&x.marks.length) datedMarks(fitKeys({start:x.start,frozen:t.frozen||[]},x.marks.length),x.marks,d); });
+  return {name:t.name,dated:d}; })); }
+$("tStatM").addEventListener("change",e=>{ STATM.t=e.target.value; renderTeam(); });
+$("fitStatM").addEventListener("change",e=>{ STATM.f=e.target.value; renderFit(); });
+
 /* FITNESS GROUP */
-let FIT=[], FITTITLE="Fitness", FITOPEN=null, FITRENEW=null, FITOLD=null;
-const tueKey=d=>keyOf(d), addDays=(k,n)=>{const d=parse(k);d.setDate(d.getDate()+n);return keyOf(d);};
+let FIT=[], FITTITLE="Fitness", FITOPEN=null, FITRENEW=null, FITOLD=null, FFED=null;
+const addDays=(k,n)=>{const d=parse(k);d.setDate(d.getDate()+n);return keyOf(d);};
 const ddmm=k=>{const d=parse(k);return pad(d.getDate())+"/"+pad(d.getMonth()+1);};
 function lastTue(){const d=new Date(CY,CM,now.getDate());while(d.getDay()!==2)d.setDate(d.getDate()-1);return keyOf(d);}
 function tueOptions(sel,back=9){ const base=lastTue(), out=[]; for(let i=-back;i<=9;i++) out.push(addDays(base,7*i)); if(sel&&!out.includes(sel)) out.push(sel); out.sort();
@@ -817,6 +826,19 @@ async function fitFreeze(t,from){
   const lost=m.slice(keep).filter(Boolean).length;
   FITRENEW=null; await fitSave(t.id,{freeze:from, marks:m.slice(0,keep)});
   if(lost) fail(`${lost} mark${lost>1?"s":""} from today onwards were cleared by the freeze.`);
+}
+/* change the date of the open freeze (same limits as a new freeze) */
+async function fitFreezeEdit(t,from){
+  const t0={...t,freeze:null}, m=fitMarks(t0), mn=frzMin(t.start,fitKeys(t0,m.length),m,t0), mx=addDays(todayKey,60);
+  if(!from||from<mn||from>mx){ fail(`Pick a freeze date from ${ddmm(mn)} to ${ddmm(mx)}.`); return; }
+  const keep=fitKeys({...t0,freeze:from},m.length).length;
+  FFED=null; await fitSave(t.id,{freeze:from, marks:m.slice(0,keep)});
+}
+/* delete a past freeze: its weeks come back as normal boxes, every mark stays on its own date */
+async function fitFrzDel(t,i){
+  const fr=(t.frozen||[]).filter((_,j)=>j!==i), m=fitMarks(t), m2=remapMarks(fitKeys(t,m.length),m,fitKeys({...t,frozen:fr},m.length));
+  if(!m2){ fail("Can't delete this freeze: some marked sessions would fall off the card."); return; }
+  await fitSave(t.id,{frozen:fr, marks:m2});
 }
 async function fitResume(t){
   const to=addDays(todayKey,-1), list=(t.frozen||[]).slice();
@@ -868,10 +890,14 @@ function renderFit(){
     const end=t.freeze?frzBadge:(full?`<button type="button" class="frn" data-renew="${t.id}">Renew</button>`:`<span class="fct">${pres}/${nn}</span>`);
     const nextTue=(k=>k[m.length])(fitKeys(t,m.length+1))||(t.start?addDays(t.start,7*m.length):lastTue());
     const fmn=t.start?frzMin(t.start,fk,m,t):"", fv=fmn>todayKey?fmn:todayKey;
+    const t0={...t,freeze:null}, m0=fitMarks(t0), fmn0=t.freeze&&t.start?frzMin(t.start,fitKeys(t0,m0.length),m0,t0):"";
     const fhold=!t.start?"":(t.freeze
       ? `<div class="row" style="align-items:center;margin-top:2px">
            <button type="button" class="btn f-resume" style="flex:0 0 auto">Resume</button>
-           <span class="note" style="margin:0">${frzNote(t)} The weeks away are not counted.</span></div>`
+           <button type="button" class="x f-fedit" style="flex:0 0 auto">${FFED===t.id?"Close":"Edit date"}</button>
+           <button type="button" class="x f-fcancel" style="flex:0 0 auto">Cancel freeze</button></div>
+         ${FFED===t.id?`<div class="row" style="align-items:end"><label style="flex:0 1 170px">Freeze from<input type="date" class="f-frzd2" value="${t.freeze}" min="${fmn0}" max="${addDays(todayKey,60)}"></label><button type="button" class="btn f-fsave" style="flex:0 0 auto">Save date</button></div>`:""}
+         <div class="row" style="align-items:center"><span class="note" style="margin:0">${frzNote(t)} The weeks away are not counted.</span></div>`
       : `<div class="row" style="align-items:end;margin-top:2px">
            <label style="flex:0 1 170px">Freeze from<input type="date" class="f-frzd" value="${fv}" min="${fmn}" max="${addDays(todayKey,60)}"></label>
            <button type="button" class="btn alt f-freeze" style="flex:0 0 auto">❄ Freeze</button></div>
@@ -899,6 +925,8 @@ function renderFit(){
   else $("fitLast").hidden=true;
   $("fitSum").innerHTML=`<span>Trainees: <b>${rows.length}</b></span><span>Need renewal soon: <b>${soon}</b></span>`;
   $("fitTab").classList.toggle("due",soon>0);
+  fitStats(rows);
+  renderDue();
 }
 $("fitList").addEventListener("click",async e=>{
   const c=e.target.closest(".fc");
@@ -914,7 +942,13 @@ $("fitList").addEventListener("click",async e=>{
   const row=e.target.closest(".fr"); if(!row) return; const t=FIT.find(x=>x.id===row.dataset.row);
   if(e.target.closest(".fr-no")){ FITRENEW=null; FITOLD=null; renderFit(); return; }
   if(e.target.closest(".f-freeze")){ fitFreeze(t,row.querySelector(".f-frzd").value); return; }
-  if(e.target.closest(".f-resume")){ fitResume(t); return; }
+  if(e.target.closest(".f-resume")){ FFED=null; fitResume(t); return; }
+  if(e.target.closest(".f-fedit")){ FFED=FFED===t.id?null:t.id; renderFit(); return; }
+  if(e.target.closest(".f-fsave")){ fitFreezeEdit(t,row.querySelector(".f-frzd2").value); return; }
+  const fcn=e.target.closest(".f-fcancel");
+  if(fcn){ if(!armBtn(fcn,"Cancel freeze")) return; FFED=null; fitSave(t.id,{freeze:null}); return; }
+  const fzd=e.target.closest(".fz-del");
+  if(fzd){ if(!armBtn(fzd,"Delete")) return; fitFrzDel(t,+fzd.dataset.fi); return; }
   if(e.target.closest(".fo-open")){ FITOLD=t.id; renderFit(); return; }
   if(e.target.closest(".fo-no")){ FITOLD=null; renderFit(); return; }
   if(e.target.closest(".fo-save")){
@@ -967,7 +1001,7 @@ renderFit();
 /* TEAMS (Safwa / Sharks / Dolphin) */
 const yy=k=>ddmm(k)+"/"+String(parse(k).getFullYear()).slice(2);
 const wd=k=>SHORT[parse(k).getDay()];
-let TCUR="safwa", SW=[], TOPEN=null, TEDIT=null, TOLD=null;
+let TCUR="safwa", SW=[], TOPEN=null, TEDIT=null, TOLD=null, TFED=null;
 (function(){ const st=document.createElement("style"); st.textContent=
   `.fct.frz{background:var(--tint);color:var(--blue);font-weight:700;border-radius:8px;padding:2px 8px}
    .fc.frz{opacity:.45;border-style:dashed}
@@ -989,10 +1023,17 @@ function frzMin(start,ks,m,x){ let mn=start; m.forEach((v,i)=>{ if(v&&ks[i]&&add
 function frzSess(f,isDay){ const to=f.to||todayKey; let n=0; for(let k=f.from,g=0;k<=to&&g<800;k=addDays(k,1),g++) if(isDay(k)) n++; return n; }
 /* "Freezes" list: every hold with its dates, days and sessions */
 function frzLog(x,isDay){ const l=frzList(x); if(!l.length) return "";
-  return `<p class="note" style="margin:4px 0 0">Freezes</p>`+l.map(f=>{
+  return `<p class="note" style="margin:4px 0 0">Freezes</p>`+l.map((f,i)=>{
     if(!f.to&&f.from>todayKey) return `<div class="fh cur"><b>❄</b><span>Starts ${wd(f.from)} ${ddmm(f.from)}</span><span class="fhs">planned</span></div>`;
     const to=f.to||todayKey, days=Math.round((parse(to)-parse(f.from))/864e5)+1, n=frzSess(f,isDay);
-    return `<div class="fh${f.to?"":" cur"}"><b>❄</b><span>${yy(f.from)} → ${f.to?yy(f.to):"now"}</span><span class="fhs">${days} day${days===1?"":"s"} · ${n} session${n===1?"":"s"}</span></div>`; }).join(""); }
+    const del=f.to?`<button type="button" class="x fz-del" data-fi="${i}">Delete</button>`:"";
+    return `<div class="fh${f.to?"":" cur"}"><b>❄</b><span>${yy(f.from)} → ${f.to?yy(f.to):"now"}</span><span class="fhs">${days} day${days===1?"":"s"} · ${n} session${n===1?"":"s"}</span>${del}</div>`; }).join(""); }
+/* after a past freeze is deleted: put every mark back on its own date; null if a marked date would fall off the card */
+function remapMarks(oldKs,oldM,newKs){ const map={}; oldM.forEach((v,i)=>{ if(v&&oldKs[i]) map[oldKs[i]]=v; });
+  const set=new Set(newKs); if(Object.keys(map).some(k=>!set.has(k))) return null;
+  return newKs.map(k=>map[k]||""); }
+/* deleting a past freeze or cancelling a freeze needs two taps */
+function armBtn(b,label){ if(b.classList.contains("arm")) return true; b.classList.add("arm"); b.textContent="Sure? Tap again"; setTimeout(()=>{ if(b.isConnected){ b.classList.remove("arm"); b.textContent=label; } },3000); return false; }
 
 function nextTrain(team,k){ const d=TM(team).days; for(let i=0;i<14;i++){ const kk=addDays(k,i); if(d.includes(parse(kk).getDay())) return kk; } return k; }
 function sessKeys(team,start,n){ const out=[]; let k=nextTrain(team,start); while(out.length<n){ out.push(k); k=nextTrain(team,addDays(k,1)); } return out; }
@@ -1048,6 +1089,18 @@ async function teamFreeze(s,from){
   TOPEN=null; await teamSave(s.id,{freeze:from, marks:m.slice(0,cut)});
   if(lost) fail(`${lost} mark${lost>1?"s":""} from today onwards were cleared by the freeze.`);
 }
+/* change the date of the open freeze (same limits as a new freeze) */
+async function teamFreezeEdit(s,from){
+  const s0={...s,freeze:null}, ks=teamKeys(s0), m=marksOf(s0), mn=frzMin(s.start,ks,m,s0), mx=addDays(todayKey,60);
+  if(!from||from<mn||from>mx){ fail(`Pick a freeze date from ${ddmm(mn)} to ${ddmm(mx)}.`); return; }
+  TFED=null; await teamSave(s.id,{freeze:from, marks:m.slice(0,ks.filter(k=>k<from).length)});
+}
+/* delete a past freeze: its sessions come back as normal boxes, every mark stays on its own date */
+async function teamFrzDel(s,i){
+  const fr=(s.frozen||[]).filter((_,j)=>j!==i), m2=remapMarks(teamKeys(s),marksOf(s),teamKeys({...s,frozen:fr,marks:[]}));
+  if(!m2){ fail("Can't delete this freeze: some marked sessions would fall off the card."); return; }
+  await teamSave(s.id,{frozen:fr, marks:m2});
+}
 async function teamResume(s){
   const to=addDays(todayKey,-1), list=(s.frozen||[]).slice();
   if(to>=s.freeze) list.push({from:s.freeze,to});
@@ -1087,10 +1140,14 @@ function renderTeam(){
     const end=s.freeze?frzBadge:(full?`<button type="button" class="frn" data-rn="${s.id}">Renew</button>`:`<span class="fct">${pres}/${n}</span>`);
     const nextK=nextTrain(s.team,addDays(teamEnd(s),1));
     const fmn=frzMin(s.start,ks,m,s), fv=fmn>todayKey?fmn:todayKey;
+    const s0={...s,freeze:null}, fmn0=s.freeze?frzMin(s.start,teamKeys(s0),marksOf(s0),s0):"";
     const hold=s.freeze
       ?`<div class="row" style="align-items:center;margin-top:2px">
            <button type="button" class="btn t-resume" style="flex:0 0 auto">Resume</button>
-           <span class="note" style="margin:0">${frzNote(s)} ${(r=>`${r} session${r===1?"":"s"} will continue after Resume.`)(Math.max(0,monthKeys(s.team,s.start).length-teamKeys(s).length))}</span></div>`
+           <button type="button" class="x t-fedit" style="flex:0 0 auto">${TFED===s.id?"Close":"Edit date"}</button>
+           <button type="button" class="x t-fcancel" style="flex:0 0 auto">Cancel freeze</button></div>
+         ${TFED===s.id?`<div class="row" style="align-items:end"><label style="flex:0 1 170px">Freeze from<input type="date" class="t-frzd2" value="${s.freeze}" min="${fmn0}" max="${addDays(todayKey,60)}"></label><button type="button" class="btn t-fsave" style="flex:0 0 auto">Save date</button></div>`:""}
+         <div class="row" style="align-items:center"><span class="note" style="margin:0">${frzNote(s)} ${(r=>`${r} session${r===1?"":"s"} will continue after Resume.`)(Math.max(0,monthKeys(s.team,s.start).length-teamKeys(s).length))}</span></div>`
       : `<div class="row" style="align-items:end;margin-top:2px">
            <label style="flex:0 1 170px">Freeze from<input type="date" class="t-frzd" value="${fv}" min="${fmn}" max="${addDays(todayKey,60)}"></label>
            <button type="button" class="btn alt t-freeze" style="flex:0 0 auto">❄ Freeze</button></div>
@@ -1119,8 +1176,32 @@ function renderTeam(){
   else $("tLast").hidden=true;
   $("tSum").innerHTML=`<span>Swimmers: <b>${rows.length}</b></span><span>Need renewal soon: <b>${soon}</b></span><span>${T.days.map(d=>SHORT[d]).join(" · ")} · 1 month card</span>`;
   $("tHow").textContent=`Tap any box to change it: empty → ✓ Present → ✗ Absent → empty. Blue frame = today. Yellow ! = a day that passed without a mark. Tap a name to share the card or renew it. Orange name = 1 session left or the month is over.`;
+  teamStats(rows);
+  renderDue();
 }
 
+
+/* RENEWALS DUE — teams and Fitness: everyone shown orange (1 session left, month over or finished); frozen ones are skipped */
+function renderDue(){
+  if(!TEAMREADY) return;
+  const out=[], byOrder=(a,b)=>(a.order||0)-(b.order||0);
+  TEAMS.forEach(T=>SW.filter(s=>s.team===T.id&&!s.freeze&&(isSoon(s)||teamEnded(s))).sort(byOrder).forEach(s=>{
+    const left=teamKeys(s).filter(k=>k>=todayKey).length;
+    out.push({go:"t",id:s.id,tab:T.id,name:s.name,grp:T.name,st:left?"1 session left":"Month over"}); }));
+  [...FIT].filter(t=>!t.freeze).sort(byOrder).forEach(t=>{ const m=fitMarks(t), left=m.length-m.filter(Boolean).length;
+    if(left<=1) out.push({go:"f",id:t.id,tab:"fit",name:t.name,grp:FITTITLE,st:left?"1 session left":"Finished"}); });
+  $("dueWrap").hidden=!out.length;
+  $("dueSum").textContent=`Renewals due (${out.length})`;
+  $("dueList").innerHTML=out.map((x,i)=>`<div class="fr" style="padding:7px 0"><div class="fn"><button type="button" class="fnm" data-due="${i}"></button><small></small></div><span class="soon" style="font-size:13px">${x.st}</span></div>`).join("");
+  $("dueList").querySelectorAll("[data-due]").forEach(b=>{ const x=out[+b.dataset.due]; b.textContent=x.name; b.nextElementSibling.textContent=x.grp; b.onclick=()=>goDue(x); });
+}
+/* tap a name in "Renewals due": open its tab and its Renew panel */
+function goDue(x){
+  $("dueWrap").open=false;
+  if(x.go==="t"){ showTab(x.tab); TOPEN=x.id; TEDIT=null; TOLD=null; renderTeam(); }
+  else{ showTab("fit"); FITRENEW=x.id; FITOPEN=null; renderFit(); }
+  const r=document.querySelector(`#tList .fr[data-row="${x.id}"],#fitList .fr[data-row="${x.id}"]`); if(r&&r.scrollIntoView) r.scrollIntoView({block:"center",behavior:"smooth"});
+}
 
 async function teamMove(id,pos){
   const s0=SW.find(x=>x.id===id), rows=SW.filter(s=>s.team===s0.team).sort((a,b)=>(a.order||0)-(b.order||0)), from=rows.findIndex(x=>x.id===id);
@@ -1139,7 +1220,13 @@ $("tList").addEventListener("click",async e=>{
   if(e.target.closest(".sh-go")){ teamShareCard(s,e.target.closest(".sh-go")); return; }
   if(e.target.closest(".fr-no")){ TOPEN=null; TOLD=null; renderTeam(); return; }
   if(e.target.closest(".t-freeze")){ teamFreeze(s,row.querySelector(".t-frzd").value); return; }
-  if(e.target.closest(".t-resume")){ teamResume(s); return; }
+  if(e.target.closest(".t-resume")){ TFED=null; teamResume(s); return; }
+  if(e.target.closest(".t-fedit")){ TFED=TFED===s.id?null:s.id; renderTeam(); return; }
+  if(e.target.closest(".t-fsave")){ teamFreezeEdit(s,row.querySelector(".t-frzd2").value); return; }
+  const fcn=e.target.closest(".t-fcancel");
+  if(fcn){ if(!armBtn(fcn,"Cancel freeze")) return; TFED=null; teamSave(s.id,{freeze:null}); return; }
+  const fzd=e.target.closest(".fz-del");
+  if(fzd){ if(!armBtn(fzd,"Delete")) return; teamFrzDel(s,+fzd.dataset.fi); return; }
   if(e.target.closest(".fo-open")){ TOLD=s.id; renderTeam(); return; }
   if(e.target.closest(".fo-no")){ TOLD=null; renderTeam(); return; }
   if(e.target.closest(".fo-save")){
