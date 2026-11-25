@@ -897,11 +897,15 @@ async function fitFreezeEdit(t,from){
   const keep=fitKeys({...t0,freeze:from},m.length).length;
   FFED=null; await fitSave(t.id,{freeze:from, marks:m.slice(0,keep)});
 }
-/* delete a past freeze: its weeks come back as normal boxes, every mark stays on its own date */
+/* delete a past freeze: its weeks come back as normal boxes, every mark stays on its own date;
+   marks whose date is no longer on the shorter card are removed (the Delete button lists them first) */
+function fitFrzPlan(t,i){
+  const fr=(t.frozen||[]).filter((_,j)=>j!==i), m=fitMarks(t);
+  return {fr,...remapMarks(fitKeys(t,m.length),m,fitKeys({...t,frozen:fr},m.length))};
+}
 async function fitFrzDel(t,i){
-  const fr=(t.frozen||[]).filter((_,j)=>j!==i), m=fitMarks(t), m2=remapMarks(fitKeys(t,m.length),m,fitKeys({...t,frozen:fr},m.length));
-  if(!m2){ fail("Can't delete this freeze: some marked sessions would fall off the card."); return; }
-  await fitSave(t.id,{frozen:fr, marks:m2});
+  const p=fitFrzPlan(t,i);
+  await fitSave(t.id,{frozen:p.fr, marks:p.m});
 }
 async function fitResume(t){
   const to=addDays(todayKey,-1), list=(t.frozen||[]).slice();
@@ -1011,7 +1015,7 @@ $("fitList").addEventListener("click",async e=>{
   const fcn=e.target.closest(".f-fcancel");
   if(fcn){ if(!armBtn(fcn,"Cancel freeze")) return; FFED=null; fitSave(t.id,{freeze:null}); return; }
   const fzd=e.target.closest(".fz-del");
-  if(fzd){ if(!armBtn(fzd,"Delete")) return; fitFrzDel(t,+fzd.dataset.fi); return; }
+  if(fzd){ const l=fitFrzPlan(t,+fzd.dataset.fi).lost; if(!armBtn(fzd,"Delete",frzLostTxt(l),l.length?6000:3000)) return; fitFrzDel(t,+fzd.dataset.fi); return; }
   if(e.target.closest(".fo-open")){ FITOLD=t.id; renderFit(); return; }
   if(e.target.closest(".fo-no")){ FITOLD=null; renderFit(); return; }
   if(e.target.closest(".fo-save")){
@@ -1091,12 +1095,15 @@ function frzLog(x,isDay){ const l=frzList(x); if(!l.length) return "";
     const to=f.to||todayKey, days=Math.round((parse(to)-parse(f.from))/864e5)+1, n=frzSess(f,isDay);
     const del=f.to?`<button type="button" class="x fz-del" data-fi="${i}">Delete</button>`:"";
     return `<div class="fh${f.to?"":" cur"}"><b>❄</b><span>${yy(f.from)} → ${f.to?yy(f.to):"now"}</span><span class="fhs">${days} day${days===1?"":"s"} · ${n} session${n===1?"":"s"}</span>${del}</div>`; }).join(""); }
-/* after a past freeze is deleted: put every mark back on its own date; null if a marked date would fall off the card */
+/* after a past freeze is deleted: put every mark back on its own date.
+   m = the new marks, lost = dates of marks that are no longer on the card (they are dropped) */
 function remapMarks(oldKs,oldM,newKs){ const map={}; oldM.forEach((v,i)=>{ if(v&&oldKs[i]) map[oldKs[i]]=v; });
-  const set=new Set(newKs); if(Object.keys(map).some(k=>!set.has(k))) return null;
-  return newKs.map(k=>map[k]||""); }
+  const set=new Set(newKs), lost=Object.keys(map).filter(k=>!set.has(k)).sort();
+  return {m:newKs.map(k=>map[k]||""), lost}; }
+/* the "Sure?" text of a freeze Delete: names the marks that will be removed */
+const frzLostTxt=l=>l.length?`Sure? ${l.length} marked session${l.length>1?"s":""} will be removed (${l.map(ddmm).join(", ")}). Tap again`:"Sure? Tap again";
 /* deleting a past freeze or cancelling a freeze needs two taps */
-function armBtn(b,label){ if(b.classList.contains("arm")) return true; b.classList.add("arm"); b.textContent="Sure? Tap again"; setTimeout(()=>{ if(b.isConnected){ b.classList.remove("arm"); b.textContent=label; } },3000); return false; }
+function armBtn(b,label,txt,ms){ if(b.classList.contains("arm")) return true; b.classList.add("arm"); b.textContent=txt||"Sure? Tap again"; setTimeout(()=>{ if(b.isConnected){ b.classList.remove("arm"); b.textContent=label; } },ms||3000); return false; }
 
 function nextTrain(team,k){ const d=TM(team).days; for(let i=0;i<14;i++){ const kk=addDays(k,i); if(d.includes(parse(kk).getDay())) return kk; } return k; }
 function sessKeys(team,start,n){ const out=[]; let k=nextTrain(team,start); while(out.length<n){ out.push(k); k=nextTrain(team,addDays(k,1)); } return out; }
@@ -1158,11 +1165,15 @@ async function teamFreezeEdit(s,from){
   if(!from||from<mn||from>mx){ fail(`Pick a freeze date from ${ddmm(mn)} to ${ddmm(mx)}.`); return; }
   TFED=null; await teamSave(s.id,{freeze:from, marks:m.slice(0,ks.filter(k=>k<from).length)});
 }
-/* delete a past freeze: its sessions come back as normal boxes, every mark stays on its own date */
+/* delete a past freeze: its sessions come back as normal boxes, every mark stays on its own date;
+   marks whose date is no longer on the shorter card are removed (the Delete button lists them first) */
+function teamFrzPlan(s,i){
+  const fr=(s.frozen||[]).filter((_,j)=>j!==i);
+  return {fr,...remapMarks(teamKeys(s),marksOf(s),teamKeys({...s,frozen:fr,marks:[]}))};
+}
 async function teamFrzDel(s,i){
-  const fr=(s.frozen||[]).filter((_,j)=>j!==i), m2=remapMarks(teamKeys(s),marksOf(s),teamKeys({...s,frozen:fr,marks:[]}));
-  if(!m2){ fail("Can't delete this freeze: some marked sessions would fall off the card."); return; }
-  await teamSave(s.id,{frozen:fr, marks:m2});
+  const p=teamFrzPlan(s,i);
+  await teamSave(s.id,{frozen:p.fr, marks:p.m});
 }
 async function teamResume(s){
   const to=addDays(todayKey,-1), list=(s.frozen||[]).slice();
@@ -1289,7 +1300,7 @@ $("tList").addEventListener("click",async e=>{
   const fcn=e.target.closest(".t-fcancel");
   if(fcn){ if(!armBtn(fcn,"Cancel freeze")) return; TFED=null; teamSave(s.id,{freeze:null}); return; }
   const fzd=e.target.closest(".fz-del");
-  if(fzd){ if(!armBtn(fzd,"Delete")) return; teamFrzDel(s,+fzd.dataset.fi); return; }
+  if(fzd){ const l=teamFrzPlan(s,+fzd.dataset.fi).lost; if(!armBtn(fzd,"Delete",frzLostTxt(l),l.length?6000:3000)) return; teamFrzDel(s,+fzd.dataset.fi); return; }
   if(e.target.closest(".fo-open")){ TOLD=s.id; renderTeam(); return; }
   if(e.target.closest(".fo-no")){ TOLD=null; renderTeam(); return; }
   if(e.target.closest(".fo-save")){
