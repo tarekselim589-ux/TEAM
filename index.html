@@ -341,6 +341,11 @@ select,input{background:var(--glass2);border-color:var(--glassbd)}
   </div>
 </div>
 
+<style>
+/* the copy saved on this phone is showing while the live data loads: look only, no taps */
+body.stale #app>:not(#tabs),body.stale #pvPanels>*{pointer-events:none;opacity:.55}
+body.stale #app::before{content:"Updating…";display:block;text-align:center;font-size:13px;opacity:.75;padding:4px 0}
+</style>
 <script>
 try{ if(localStorage.getItem("fbIn_team")==="1"){ document.getElementById("booting").hidden=true; document.getElementById("app").hidden=false; document.getElementById("outBtn").hidden=false; } }catch(e){}
 </script>
@@ -359,15 +364,41 @@ const fbApp=initializeApp({
 const auth=getAuth(fbApp);
 let fs; try{ fs=initializeFirestore(fbApp,{localCache:persistentLocalCache()}); }catch(e){ fs=initializeFirestore(fbApp,{}); }
 const wrap=d=>({id:d.id,exists:d.exists(),data:()=>d.data()});
+/* A copy of the last data seen is kept on this phone, so the next open can show it
+   at once (read-only, dimmed) while Firebase connects. Writes always go to Firebase. */
+const CKEY="team_cache";
+let CACHE={}; try{ CACHE=JSON.parse(localStorage.getItem(CKEY)||"{}")||{}; }catch(e){ CACHE={}; }
+let cacheT;
+/* all four apps share this site's storage, so a copy that grows too big is dropped
+   rather than crowding out GYM's own saved numbers */
+function flushCache(){ clearTimeout(cacheT); try{ const s=JSON.stringify(CACHE); if(s.length>700000) throw 0; localStorage.setItem(CKEY,s); }catch(e){ try{localStorage.removeItem(CKEY);}catch(x){} } }
+function keep(p,v){ CACHE[p]=v; clearTimeout(cacheT); cacheT=setTimeout(flushCache,1000); }
+addEventListener("pagehide",()=>{ if(cacheT) flushCache(); });
+/* taps open again once the live data for these has arrived */
+const NEED=["team_swimmers","fit","privates"], GOT=new Set();
+function live(p){ if(!NEED.includes(p)||GOT.has(p)) return; GOT.add(p); if(NEED.every(x=>GOT.has(x))) document.body.classList.remove("stale"); }
+const cl=v=>JSON.parse(JSON.stringify(v));
+const stale=()=>Promise.reject(new Error("Still updating"));
+const CFS={
+  collection:p=>({
+    onSnapshot:n=>{ const c=CACHE[p]; if(Array.isArray(c)) n({docs:c.map(x=>({id:x.i,exists:true,data:()=>cl(x.d)}))}); return ()=>{}; },
+    add:stale, get:stale
+  }),
+  doc:p=>({
+    set:stale, update:stale, delete:stale,
+    onSnapshot:n=>{ const c=CACHE[p]; if(c&&!Array.isArray(c)&&typeof c==="object") n({id:p.split("/").pop(),exists:!!c.e,data:()=>c.e?cl(c.d):undefined}); return ()=>{}; }
+  }),
+  batchSet:stale
+};
 const FS={
   collection:p=>({
-    onSnapshot:(n,e)=>fSnap(fCol(fs,p),s=>n({docs:s.docs.map(wrap)}),e),
+    onSnapshot:(n,e)=>fSnap(fCol(fs,p),s=>{ n({docs:s.docs.map(wrap)}); keep(p,s.docs.map(d=>({i:d.id,d:d.data()}))); live(p); },e),
     add:async data=>{const r=await addDoc(fCol(fs,p),data);return {id:r.id};},
     get:async()=>{const s=await getDocs(fCol(fs,p));return {docs:s.docs.map(wrap)};}
   }),
   doc:p=>({
     set:d=>setDoc(fDoc(fs,p),d), update:d=>updateDoc(fDoc(fs,p),d), delete:()=>deleteDoc(fDoc(fs,p)),
-    onSnapshot:(n,e)=>fSnap(fDoc(fs,p),s=>n(wrap(s)),e)
+    onSnapshot:(n,e)=>fSnap(fDoc(fs,p),s=>{ n(wrap(s)); keep(p,{e:s.exists(),d:s.exists()?s.data():null}); },e)
   }),
   batchSet:async items=>{
     for(let i=0;i<items.length;i+=400){const b=writeBatch(fs);items.slice(i,i+400).forEach(([p,d])=>b.set(fDoc(fs,p),d));await b.commit();}
@@ -1413,14 +1444,18 @@ async function startData(){
   db.doc("team_settings/tabs").onSnapshot(snap=>{ const d=snap.exists?snap.data():null; TABORDER=(d&&Array.isArray(d.order))?d.order:[]; applyTabOrder(); },()=>{});
 }
 let STARTED=false;
+/* signed in last time and a saved copy exists: show it now, read-only, until the live data arrives */
+let WARM=false;
+try{ if(localStorage.getItem("fbIn_team")==="1"&&Array.isArray(CACHE.team_swimmers)){ WARM=true; document.body.classList.add("stale"); db=CFS; startData(); } }catch(e){}
 onAuthStateChanged(auth,user=>{
   $("booting").hidden=true;
   if(user){
     try{localStorage.setItem("fbIn_team","1");}catch(e){}
     $("login").hidden=true; $("app").hidden=false; $("outBtn").hidden=false;
-    if(!STARTED){STARTED=true; db=FS; startData();}
+    if(!STARTED){STARTED=true; if(WARM) Object.keys(SUBS).forEach(k=>delete SUBS[k]); db=FS; startData();}
   }else{
-    try{localStorage.removeItem("fbIn_team");}catch(e){}
+    clearTimeout(cacheT); CACHE={}; document.body.classList.remove("stale");
+    try{localStorage.removeItem("fbIn_team");localStorage.removeItem(CKEY);}catch(e){}
     if(STARTED){location.reload();return;}
     $("app").hidden=true; $("outBtn").hidden=true; $("login").hidden=false;
   }
