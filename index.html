@@ -434,6 +434,8 @@ const keyOf=dt=>`${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())
 const parse=k=>{const [y,m,d]=k.split("-").map(Number);return new Date(y,m-1,d);};
 const show=k=>{const d=parse(k);return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;};
 const todayKey=keyOf(new Date(CY,CM,now.getDate()));
+/* new day while the app stayed open: reload so "today" is right */
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"&&keyOf(new Date())!==todayKey) location.reload(); });
 /* "Not marked" line: days that passed with no ✓ or ✗ (newest first) */
 function missLine(el,counts,label){
   const ks=Object.keys(counts).sort().reverse(); if(!ks.length){el.hidden=true;return;}
@@ -808,10 +810,12 @@ function fitKeys(t,n){ const out=[]; if(!t.start) return out; let k=t.start, g=0
     if(isFrz(t,k)){ if(t.freeze&&k>=t.freeze) break; k=addDays(k,7); continue; }
     out.push(k); k=addDays(k,7); }
   return out; }
-async function fitFreeze(t){
-  const m=fitMarks(t), keep=fitKeys({...t,freeze:todayKey},m.length).length;
+async function fitFreeze(t,from){
+  const m=fitMarks(t), mn=frzMin(t.start,fitKeys(t,m.length),m,t), mx=addDays(todayKey,60);
+  if(!from||from<mn||from>mx){ fail(`Pick a freeze date from ${ddmm(mn)} to ${ddmm(mx)}.`); return; }
+  const keep=fitKeys({...t,freeze:from},m.length).length;
   const lost=m.slice(keep).filter(Boolean).length;
-  FITRENEW=null; await fitSave(t.id,{freeze:todayKey, marks:m.slice(0,keep)});
+  FITRENEW=null; await fitSave(t.id,{freeze:from, marks:m.slice(0,keep)});
   if(lost) fail(`${lost} mark${lost>1?"s":""} from today onwards were cleared by the freeze.`);
 }
 async function fitResume(t){
@@ -863,15 +867,17 @@ function renderFit(){
       return `<button type="button" class="fc ${x}${td?" today":""}${ms?" miss":""}${fz?" frz":""}" data-id="${t.id}" data-i="${i}" aria-label="Session ${i+1}">${k?`<span class="fw">${SHORT[parse(k).getDay()]}</span>`:(fz?`<span class="fw">Tue</span>`:"")}<span class="fd">${k?ddmm(k):(fz?"❄":"#"+(i+1))} <span class="fm">${x==="p"?"✓":x==="a"?"✗":""}</span>${ms?`<span class="fx">!</span>`:""}</span></button>`; }).join("");
     const end=t.freeze?frzBadge:(full?`<button type="button" class="frn" data-renew="${t.id}">Renew</button>`:`<span class="fct">${pres}/${nn}</span>`);
     const nextTue=(k=>k[m.length])(fitKeys(t,m.length+1))||(t.start?addDays(t.start,7*m.length):lastTue());
+    const fmn=t.start?frzMin(t.start,fk,m,t):"", fv=fmn>todayKey?fmn:todayKey;
     const fhold=!t.start?"":(t.freeze
       ? `<div class="row" style="align-items:center;margin-top:2px">
            <button type="button" class="btn f-resume" style="flex:0 0 auto">Resume</button>
            <span class="note" style="margin:0">${frzNote(t)} The weeks away are not counted.</span></div>`
-      : `<div class="row" style="align-items:center;margin-top:2px">
-           <button type="button" class="btn alt f-freeze" style="flex:0 0 auto">❄ Freeze</button>
-           <span class="note" style="margin:0">Travelling? Freeze now and resume when back. Frozen weeks are not counted.</span></div>`);
-    const rnw=FITRENEW===t.id?`<div class="fed">${t.start?`<button type="button" class="btn sh-go" style="align-self:flex-start">Share card</button>`:`<p class="note">Set a start Tuesday in Edit to share a card.</p>`}<div class="row" style="align-items:end"><label>Renew from<select class="fr-date">${tueOptions(nextTue)}</select></label>
-        <button type="button" class="btn fr-go" style="flex:0 0 auto">Renew</button><button type="button" class="x fr-no" style="flex:0 0 auto">Close</button></div>${fhold}${fitHist(t)}</div>`:"";
+      : `<div class="row" style="align-items:end;margin-top:2px">
+           <label style="flex:0 1 170px">Freeze from<input type="date" class="f-frzd" value="${fv}" min="${fmn}" max="${addDays(todayKey,60)}"></label>
+           <button type="button" class="btn alt f-freeze" style="flex:0 0 auto">❄ Freeze</button></div>
+         <p class="note" style="margin:0">Travelling? Pick the first day away and resume when back. Frozen weeks are not counted.</p>`);
+    const rnw=FITRENEW===t.id?`<div class="fed">${t.start?`<button type="button" class="btn sh-go" style="align-self:flex-start">Share card</button>`:`<p class="note">Set a start Tuesday in Edit to share a card.</p>`}${t.freeze?`<div class="row" style="align-items:center"><span class="note" style="margin:0">Frozen now. Tap Resume first, then renew.</span><button type="button" class="x fr-no" style="flex:0 0 auto">Close</button></div>`:`<div class="row" style="align-items:end"><label>Renew from<select class="fr-date">${tueOptions(nextTue)}</select></label>
+        <button type="button" class="btn fr-go" style="flex:0 0 auto">Renew</button><button type="button" class="x fr-no" style="flex:0 0 auto">Close</button></div>`}${fhold}${t.start?frzLog(t,k=>parse(k).getDay()===parse(t.start).getDay()):""}${fitHist(t)}</div>`:"";
     const ed=FITOPEN===t.id?`<div class="fed">
         <div class="row"><label style="flex:0 1 80px">Position<input class="fe-pos" type="number" inputmode="numeric" min="1" max="${rows.length}" value="${ix+1}"></label><label>Name<input class="fe-name" maxlength="40" autocomplete="off"></label>
         <label style="flex:0 1 90px">Sessions<input class="fe-n" type="number" inputmode="numeric" min="1" max="30" value="${nn}"></label>
@@ -886,7 +892,7 @@ function renderFit(){
   }).join("");
   list.querySelectorAll(".fr").forEach(r=>{ const t=FIT.find(x=>x.id===r.dataset.row); r.querySelector(".fnm").textContent=t.name; const ni=r.querySelector(".fe-name"); if(ni) ni.value=t.name; });
   const byDay={}, fmiss={};
-  FIT.forEach(t=>{ if(!t.start) return; fitMarks(t).forEach((x,i)=>{ const k=addDays(t.start,7*i); if(!x){ if(k<todayKey) fmiss[k]=(fmiss[k]||0)+1; return; } (byDay[k]=byDay[k]||{p:0,a:0})[x]++; }); });
+  FIT.forEach(t=>{ if(!t.start) return; const m=fitMarks(t), fk=fitKeys(t,m.length); m.forEach((x,i)=>{ const k=fk[i]; if(!k) return; if(!x){ if(k<todayKey) fmiss[k]=(fmiss[k]||0)+1; return; } (byDay[k]=byDay[k]||{p:0,a:0})[x]++; }); });
   missLine($("fitMiss"),fmiss,true);
   const lastDay=Object.keys(byDay).sort().pop();
   if(lastDay){ const c=byDay[lastDay]; $("fitLast").innerHTML=`<span>Tue ${ddmm(lastDay)}</span><span class="ok">✓ Present <b>${c.p}</b></span><span class="bad">✗ Absent <b>${c.a}</b></span>`; $("fitLast").hidden=false; }
@@ -901,13 +907,13 @@ $("fitList").addEventListener("click",async e=>{
   if(rn){ const id=rn.dataset.renew||rn.dataset.rn; FITRENEW=FITRENEW===id?null:id; FITOPEN=null; renderFit(); return; }
   const shb=e.target.closest(".sh-go");
   if(shb){ const t=FIT.find(x=>x.id===shb.closest(".fr").dataset.row); if(!t||!t.start) return;
-    const m=fitMarks(t), ks=m.map((_,i)=>addDays(t.start,7*i)), yy2=k=>ddmm(k)+"/"+String(parse(k).getFullYear()).slice(2);
-    teamShareCard(t,shb,()=>rosterCardBlob({name:t.name,label:FITTITLE.toUpperCase(),range:yy2(ks[0])+" → "+yy2(ks[ks.length-1]),ks,m,of:Math.max(1,+t.n||4),doneText:"COMPLETE"})); return; }
+    const m=fitMarks(t), ks=fitKeys(t,m.length), yy2=k=>ddmm(k)+"/"+String(parse(k).getFullYear()).slice(2);
+    teamShareCard(t,shb,()=>rosterCardBlob({name:t.name,label:FITTITLE.toUpperCase(),range:yy2(ks[0]||t.start)+" → "+(ks.length<m.length?"Frozen":yy2(ks[ks.length-1])),ks,m,of:Math.max(1,+t.n||4),frozen:!!t.freeze,doneText:"COMPLETE"})); return; }
   const ed=e.target.closest("[data-edit]");
   if(ed){ FITOPEN=FITOPEN===ed.dataset.edit?null:ed.dataset.edit; FITRENEW=null; renderFit(); return; }
   const row=e.target.closest(".fr"); if(!row) return; const t=FIT.find(x=>x.id===row.dataset.row);
   if(e.target.closest(".fr-no")){ FITRENEW=null; FITOLD=null; renderFit(); return; }
-  if(e.target.closest(".f-freeze")){ fitFreeze(t); return; }
+  if(e.target.closest(".f-freeze")){ fitFreeze(t,row.querySelector(".f-frzd").value); return; }
   if(e.target.closest(".f-resume")){ fitResume(t); return; }
   if(e.target.closest(".fo-open")){ FITOLD=t.id; renderFit(); return; }
   if(e.target.closest(".fo-no")){ FITOLD=null; renderFit(); return; }
@@ -922,7 +928,7 @@ $("fitList").addEventListener("click",async e=>{
     const hi=+hd.dataset.hi, h=(t.hist||[]).filter((_,i)=>i!==hi);
     fitSave(t.id,{hist:h,renewals:Math.max(h.length,(+t.renewals||0)-1),prev:null}); return;
   }
-  if(e.target.closest(".fr-go")){ const st=row.querySelector(".fr-date").value; FITRENEW=null;
+  if(e.target.closest(".fr-go")&&!t.freeze){ const st=row.querySelector(".fr-date").value; FITRENEW=null;
     fitSave(t.id,{prev:{marks:fitMarks(t),renewals:+t.renewals||0,start:t.start||null},hist:[...(t.hist||[]),{start:t.start||null,marks:fitMarks(t),n:+t.n||4}],marks:Array(Math.max(1,+t.n||4)).fill(""),renewals:(+t.renewals||0)+1,start:st}); return; }
   if(e.target.closest(".fe-save")){
     const name=row.querySelector(".fe-name").value.trim(), n=parseInt(row.querySelector(".fe-n").value,10), r=parseInt(row.querySelector(".fe-r").value,10);
@@ -975,22 +981,36 @@ const isFrz=(x,k)=>frzList(x).some(f=>k>=f.from&&(!f.to||k<=f.to));
 function frzDays(x){ let n=0;
   frzList(x).forEach(f=>{ const to=f.to||todayKey; if(to>=f.from) n+=Math.round((parse(to)-parse(f.from))/864e5)+1; });
   return n; }
-const frzNote=x=>`Frozen since ${wd(x.freeze)} ${ddmm(x.freeze)} · ${frzDays(x)} day${frzDays(x)===1?"":"s"} so far.`;
+const frzNote=x=>x.freeze>todayKey?`Freeze starts ${wd(x.freeze)} ${ddmm(x.freeze)}.`:`Frozen since ${wd(x.freeze)} ${ddmm(x.freeze)} · ${frzDays({freeze:x.freeze})} day${frzDays({freeze:x.freeze})===1?"":"s"} so far.`;
 const frzBadge=`<span class="fct frz">❄ Frozen</span>`;
+/* earliest day a new freeze can start: after the start, the last marked box and any past freeze */
+function frzMin(start,ks,m,x){ let mn=start; m.forEach((v,i)=>{ if(v&&ks[i]&&addDays(ks[i],1)>mn) mn=addDays(ks[i],1); }); (x.frozen||[]).forEach(f=>{ if(f.to&&addDays(f.to,1)>mn) mn=addDays(f.to,1); }); return mn; }
+/* sessions that fell inside one freeze */
+function frzSess(f,isDay){ const to=f.to||todayKey; let n=0; for(let k=f.from,g=0;k<=to&&g<800;k=addDays(k,1),g++) if(isDay(k)) n++; return n; }
+/* "Freezes" list: every hold with its dates, days and sessions */
+function frzLog(x,isDay){ const l=frzList(x); if(!l.length) return "";
+  return `<p class="note" style="margin:4px 0 0">Freezes</p>`+l.map(f=>{
+    if(!f.to&&f.from>todayKey) return `<div class="fh cur"><b>❄</b><span>Starts ${wd(f.from)} ${ddmm(f.from)}</span><span class="fhs">planned</span></div>`;
+    const to=f.to||todayKey, days=Math.round((parse(to)-parse(f.from))/864e5)+1, n=frzSess(f,isDay);
+    return `<div class="fh${f.to?"":" cur"}"><b>❄</b><span>${yy(f.from)} → ${f.to?yy(f.to):"now"}</span><span class="fhs">${days} day${days===1?"":"s"} · ${n} session${n===1?"":"s"}</span></div>`; }).join(""); }
 
 function nextTrain(team,k){ const d=TM(team).days; for(let i=0;i<14;i++){ const kk=addDays(k,i); if(d.includes(parse(kk).getDay())) return kk; } return k; }
 function sessKeys(team,start,n){ const out=[]; let k=nextTrain(team,start); while(out.length<n){ out.push(k); k=nextTrain(team,addDays(k,1)); } return out; }
 /* one-month card: from the start date to the same date next month, that end day included */
 function monthEnd(start){ const d=parse(start), y=d.getFullYear(), m=d.getMonth()+1, last=new Date(y,m+1,0).getDate(); return keyOf(new Date(y,m,Math.min(d.getDate(),last))); }
-/* the card end moves out by however many days were frozen */
-function teamEnd(s){ return addDays(monthEnd(s.start), frzDays(s)); }
-function monthKeys(team,start,s){ const end=s?teamEnd(s):monthEnd(start), out=[]; let k=nextTrain(team,start);
-  while(k<=end&&out.length<400){ if(!s||!isFrz(s,k)) out.push(k); k=nextTrain(team,addDays(k,1)); } return out; }
+/* the card end: the month end, or the last session if frozen days pushed sessions past it */
+function teamEnd(s){ const ks=teamKeys(s), last=ks.length?ks[ks.length-1]:"", me=monthEnd(s.start); return last>me?last:me; }
+/* a card = the training days of one month. Frozen days are skipped and the same number of sessions continues after them; an open freeze stops the list */
+function monthKeys(team,start,s){ const end=monthEnd(start), out=[]; let k=nextTrain(team,start);
+  if(!s){ while(k<=end&&out.length<400){ out.push(k); k=nextTrain(team,addDays(k,1)); } return out; }
+  const n=monthKeys(team,start).length;
+  for(let g=0;out.length<n&&g<1500;g++){ if(!isFrz(s,k)) out.push(k); else if(s.freeze&&k>=s.freeze) break; k=nextTrain(team,addDays(k,1)); }
+  return out; }
 /* never drop a marked box: if older data has marks past the month, keep showing them */
 function teamKeys(s){ const base=monthKeys(s.team,s.start,s), src=s.marks||[]; let last=0; src.forEach((x,i)=>{ if(x) last=i+1; });
   if(last<=base.length) return base;
   const out=[]; let k=nextTrain(s.team,s.start);
-  while(out.length<last&&out.length<400){ if(!isFrz(s,k)) out.push(k); k=nextTrain(s.team,addDays(k,1)); }
+  for(let g=0;out.length<last&&g<1500;g++){ if(!isFrz(s,k)) out.push(k); else if(s.freeze&&k>=s.freeze) break; k=nextTrain(s.team,addDays(k,1)); }
   return out; }
 const nOf=s=>teamKeys(s).length;
 function marksOf(s){ const n=nOf(s), m=(s.marks||[]).slice(0,n); while(m.length<n) m.push(""); return m; }
@@ -1020,10 +1040,12 @@ function renderTabs(){
 function teamEnded(s){ if(s.freeze) return false; const ks=teamKeys(s); return (ks.length?ks[ks.length-1]:teamEnd(s))<todayKey; }
 function isSoon(s){ if(s.freeze) return false; return teamKeys(s).filter(k=>k>=todayKey).length<=1; }
 
-async function teamFreeze(s){
-  const ks=teamKeys(s), cut=ks.filter(k=>k<todayKey).length, m=marksOf(s);
+async function teamFreeze(s,from){
+  const ks=teamKeys(s), m=marksOf(s), mn=frzMin(s.start,ks,m,s), mx=addDays(todayKey,60);
+  if(!from||from<mn||from>mx){ fail(`Pick a freeze date from ${ddmm(mn)} to ${ddmm(mx)}.`); return; }
+  const cut=ks.filter(k=>k<from).length;
   const lost=m.slice(cut).filter(Boolean).length;
-  TOPEN=null; await teamSave(s.id,{freeze:todayKey, marks:m.slice(0,cut)});
+  TOPEN=null; await teamSave(s.id,{freeze:from, marks:m.slice(0,cut)});
   if(lost) fail(`${lost} mark${lost>1?"s":""} from today onwards were cleared by the freeze.`);
 }
 async function teamResume(s){
@@ -1035,7 +1057,8 @@ function teamLine(no,team,x,cur,idx){
   const n=x.marks?x.marks.length:(+x.n||TM(team).n), p=x.marks?x.marks.filter(v=>v==="p").length:(+x.p||0), a=x.marks?x.marks.filter(v=>v==="a").length:(+x.a||0);
   const range=x.start?`${yy(x.start)} → ${yy(x.end||monthEnd(x.start))}`:"No date";
   const del=cur?"":`<button type="button" class="x fh-del" data-hi="${idx}">Delete</button>`;
-  return `<div class="fh${cur?" cur":""}"><b>#${no}</b><span>${range}</span><span class="fhs">✓ ${p} · ✗ ${a}${cur?" · now":""}</span>${del}</div>`;
+  const fz=(x.frozen||[]).reduce((t,f)=>t+frzSess(f,k=>TM(team).days.includes(parse(k).getDay())),0);
+  return `<div class="fh${cur?" cur":""}"><b>#${no}</b><span>${range}</span><span class="fhs">✓ ${p} · ✗ ${a}${fz?` · ❄ ${fz}`:""}${cur?" · now":""}</span>${del}</div>`;
 }
 function histHtml(s){
   const h=(s.hist||[]).map((x,i)=>({...x,_i:i})).sort((a,b)=>(a.start||"").localeCompare(b.start||""));
@@ -1063,17 +1086,19 @@ function renderTeam(){
       return `<button type="button" class="fc ${x}${td?" today":""}${ms?" miss":""}" data-id="${s.id}" data-i="${i}" aria-label="${wd(ks[i])} ${ddmm(ks[i])}"><span class="fw">${wd(ks[i])}</span><span class="fd">${ddmm(ks[i])}${x?` <span class="fm">${x==="p"?"✓":"✗"}</span>`:""}${ms?` <span class="fx">!</span>`:""}</span></button>`; }).join("");
     const end=s.freeze?frzBadge:(full?`<button type="button" class="frn" data-rn="${s.id}">Renew</button>`:`<span class="fct">${pres}/${n}</span>`);
     const nextK=nextTrain(s.team,addDays(teamEnd(s),1));
+    const fmn=frzMin(s.start,ks,m,s), fv=fmn>todayKey?fmn:todayKey;
     const hold=s.freeze
-      ? `<div class="row" style="align-items:center;margin-top:2px">
+      ?`<div class="row" style="align-items:center;margin-top:2px">
            <button type="button" class="btn t-resume" style="flex:0 0 auto">Resume</button>
-           <span class="note" style="margin:0">${frzNote(s)} Card now ends ${ddmm(teamEnd(s))} instead of ${ddmm(monthEnd(s.start))}.</span></div>`
-      : `<div class="row" style="align-items:center;margin-top:2px">
-           <button type="button" class="btn alt t-freeze" style="flex:0 0 auto">❄ Freeze</button>
-           <span class="note" style="margin:0">Travelling? Freeze now and resume when back. Frozen days are not counted and the card end moves out.</span></div>`;
+           <span class="note" style="margin:0">${frzNote(s)} ${(r=>`${r} session${r===1?"":"s"} will continue after Resume.`)(Math.max(0,monthKeys(s.team,s.start).length-teamKeys(s).length))}</span></div>`
+      : `<div class="row" style="align-items:end;margin-top:2px">
+           <label style="flex:0 1 170px">Freeze from<input type="date" class="t-frzd" value="${fv}" min="${fmn}" max="${addDays(todayKey,60)}"></label>
+           <button type="button" class="btn alt t-freeze" style="flex:0 0 auto">❄ Freeze</button></div>
+         <p class="note" style="margin:0">Travelling? Pick the first day away and resume when back. Frozen sessions move to the end of the card.</p>`;
     const op=TOPEN===s.id?`<div class="fed">
         <button type="button" class="btn sh-go" style="align-self:flex-start">Share card</button>
-        <div class="row" style="align-items:end"><label>Renew from<select class="fr-date">${dayOpts(s.team,nextK)}</select></label>
-        <button type="button" class="btn alt fr-go" style="flex:0 0 auto">Renew</button><button type="button" class="x fr-no" style="flex:0 0 auto">Close</button></div>${hold}${histHtml(s)}</div>`:"";
+        ${s.freeze?`<div class="row" style="align-items:center"><span class="note" style="margin:0">Frozen now. Tap Resume first, then renew.</span><button type="button" class="x fr-no" style="flex:0 0 auto">Close</button></div>`:`<div class="row" style="align-items:end"><label>Renew from<select class="fr-date">${dayOpts(s.team,nextK)}</select></label>
+        <button type="button" class="btn alt fr-go" style="flex:0 0 auto">Renew</button><button type="button" class="x fr-no" style="flex:0 0 auto">Close</button></div>`}${hold}${frzLog(s,k=>TM(s.team).days.includes(parse(k).getDay()))}${histHtml(s)}</div>`:"";
     const ed=TEDIT===s.id?`<div class="fed">
         <div class="row"><label style="flex:0 1 80px">Position<input class="fe-pos" type="number" inputmode="numeric" min="1" max="${rows.length}" value="${ix+1}"></label><label>Name<input class="fe-name" maxlength="40" autocomplete="off"></label></div>
         <div class="row"><label style="flex:0 1 90px">Renewals<input class="fe-r" type="number" inputmode="numeric" min="0" value="${+s.renewals||0}"></label>
@@ -1113,7 +1138,7 @@ $("tList").addEventListener("click",async e=>{
   const row=e.target.closest(".fr"); if(!row) return; const s=SW.find(x=>x.id===row.dataset.row);
   if(e.target.closest(".sh-go")){ teamShareCard(s,e.target.closest(".sh-go")); return; }
   if(e.target.closest(".fr-no")){ TOPEN=null; TOLD=null; renderTeam(); return; }
-  if(e.target.closest(".t-freeze")){ teamFreeze(s); return; }
+  if(e.target.closest(".t-freeze")){ teamFreeze(s,row.querySelector(".t-frzd").value); return; }
   if(e.target.closest(".t-resume")){ teamResume(s); return; }
   if(e.target.closest(".fo-open")){ TOLD=s.id; renderTeam(); return; }
   if(e.target.closest(".fo-no")){ TOLD=null; renderTeam(); return; }
@@ -1128,8 +1153,8 @@ $("tList").addEventListener("click",async e=>{
     const hi=+hd.dataset.hi, h=(s.hist||[]).filter((_,i)=>i!==hi);
     teamSave(s.id,{hist:h,renewals:Math.max(h.length,(+s.renewals||0)-1),prev:null}); return;
   }
-  if(e.target.closest(".fr-go")){ const st=row.querySelector(".fr-date").value; TOPEN=null;
-    teamSave(s.id,{prev:{marks:marksOf(s),renewals:+s.renewals||0,start:s.start},hist:[...(s.hist||[]),{start:s.start,marks:marksOf(s),n:nOf(s)}],marks:[],n:undefined,renewals:(+s.renewals||0)+1,start:st}); return; }
+  if(e.target.closest(".fr-go")&&!s.freeze){ const st=row.querySelector(".fr-date").value; TOPEN=null;
+    teamSave(s.id,{prev:{marks:marksOf(s),renewals:+s.renewals||0,start:s.start,frozen:s.frozen||[]},hist:[...(s.hist||[]),{start:s.start,end:teamEnd(s),frozen:s.frozen||[],marks:marksOf(s),n:nOf(s)}],marks:[],n:undefined,frozen:[],renewals:(+s.renewals||0)+1,start:st}); return; }
   if(e.target.closest(".fe-save")){
     const name=row.querySelector(".fe-name").value.trim(), r=parseInt(row.querySelector(".fe-r").value,10), st=row.querySelector(".fe-s").value;
     if(!name||!(r>=0)||!st){ fail("Check the name, renewals and start date."); return; }
@@ -1137,7 +1162,7 @@ $("tList").addEventListener("click",async e=>{
     TEDIT=null; await teamSave(s.id,{name,n:undefined,renewals:r,marks:s.marks||[],start:st});
     if(pos>=1) await teamMove(s.id,pos); return;
   }
-  if(e.target.closest(".fe-undo")&&s.prev){ TEDIT=null; teamSave(s.id,{marks:s.prev.marks,renewals:s.prev.renewals,start:s.prev.start,n:undefined,prev:null,hist:(s.hist||[]).slice(0,-1)}); return; }
+  if(e.target.closest(".fe-undo")&&s.prev){ TEDIT=null; teamSave(s.id,{marks:s.prev.marks,renewals:s.prev.renewals,start:s.prev.start,n:undefined,...(s.prev.frozen?{frozen:s.prev.frozen}:{}),prev:null,hist:(s.hist||[]).slice(0,-1)}); return; }
   const del=e.target.closest(".fe-del");
   if(del){
     if(!del.classList.contains("arm")){ del.classList.add("arm"); del.textContent="Sure? Tap again"; setTimeout(()=>{ if(del.isConnected){del.classList.remove("arm"); del.textContent="Delete swimmer";} },3000); return; }
@@ -1157,14 +1182,15 @@ $("tStart").value=todayKey;
 
 /* SHARE CARD — same TRAINING CARD as TAREK, with the team name */
 async function teamCardBlob(s){
-  return rosterCardBlob({name:s.name,label:TM(s.team).name.toUpperCase()+" TEAM",range:yy(s.start)+" → "+yy(monthEnd(s.start)),ks:teamKeys(s),m:marksOf(s),doneText:"MONTH COMPLETE"});
+  const m=marksOf(s); if(s.freeze){ const n=monthKeys(s.team,s.start).length; while(m.length<n) m.push(""); }
+  return rosterCardBlob({name:s.name,label:TM(s.team).name.toUpperCase()+" TEAM",range:yy(s.start)+" → "+(s.freeze?"Frozen":yy(teamEnd(s))),ks:teamKeys(s),m,frozen:!!s.freeze,doneText:"MONTH COMPLETE"});
 }
 /* one card drawing for teams and Fitness: o={name,label,range,ks,m,of,doneText} */
 async function rosterCardBlob(o){
   const m=o.m, ks=o.ks, of=o.of||m.length;
-  const rows=m.map((x,i)=>({wd:wd(ks[i]),date:ddmm(ks[i]),st:x||(ks[i]>=todayKey?"u":"n"),tag:o.of&&i>=o.of?"MAKE-UP":""}));
+  const rows=m.map((x,i)=>({wd:ks[i]?wd(ks[i]):"Frozen",date:ks[i]?ddmm(ks[i]):"—",st:x||(!ks[i]||ks[i]>=todayKey?"u":"n"),tag:o.of&&i>=o.of?"MAKE-UP":""}));
   const pr=m.filter(x=>x==="p").length, ab=m.filter(x=>x==="a").length;
-  return glassCard({name:o.name,label:o.label,range:o.range,rows,of,pr,ab,left:o.of?Math.max(0,of-pr):m.filter(x=>!x).length,done:pr>=of||!m.some(x=>!x)||ks[ks.length-1]<todayKey,doneText:o.doneText});
+  return glassCard({name:o.name,label:o.label,range:o.range,rows,of,pr,ab,left:o.of?Math.max(0,of-pr):m.filter(x=>!x).length,done:!o.frozen&&(pr>=of||!m.some(x=>!x)||ks[ks.length-1]<todayKey),doneText:o.doneText});
 }
 async function teamShareCard(s,btn,blobFn){
   const old=btn.textContent; btn.disabled=true; btn.textContent="Preparing…";
